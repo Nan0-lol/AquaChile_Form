@@ -1,3 +1,4 @@
+/* --- FUENTE GENERAL --- */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
 * {
@@ -89,7 +90,9 @@ body::before {
     margin-bottom: 8px;
 }
 
+/* AQUÍ ESTÁ EL ARREGLO: Agregamos input[type="tel"] */
 .form-group input[type="text"],
+.form-group input[type="tel"],
 .form-group select {
     padding: 12px;
     border: 1.5px solid #cbd5e1;
@@ -101,7 +104,9 @@ body::before {
     background-color: rgba(255, 255, 255, 0.9); 
 }
 
+/* Y también lo agregamos para el efecto cuando haces clic (focus) */
 .form-group input[type="text"]:focus,
+.form-group input[type="tel"]:focus,
 .form-group select:focus {
     border-color: #00A3E0; 
     box-shadow: 0 0 0 3px rgba(0, 163, 224, 0.15);

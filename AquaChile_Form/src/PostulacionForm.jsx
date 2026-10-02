@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import './index.css'; // Conectamos con el CSS global de Vite
+import './index.css'; 
 
 const FormularioPostulacion = () => {
   const [formData, setFormData] = useState({
     nombreCompleto: '',
+    celular: '', // <-- Nuevo estado para el celular
     familiaCargo: '',
     nombreCargo: '',
     cv: null,
@@ -37,9 +38,10 @@ const FormularioPostulacion = () => {
     console.log('--- Datos listos para enviar al backend ---', formData);
     alert('¡Postulación enviada correctamente!');
     
-    // Limpiar los estados
+    // Limpiar los estados después de enviar
     setFormData({
       nombreCompleto: '',
+      celular: '', // <-- Se limpia el celular
       familiaCargo: '',
       nombreCargo: '',
       cv: null,
@@ -60,6 +62,7 @@ const FormularioPostulacion = () => {
         <h2>Formulario de Postulación</h2>
         
         <form onSubmit={handleSubmit}>
+          
           <div className="form-group">
             <label htmlFor="nombreCompleto">Nombre Completo:</label>
             <input
@@ -69,6 +72,20 @@ const FormularioPostulacion = () => {
               value={formData.nombreCompleto}
               onChange={handleChange}
               placeholder="Ej. Juan Pérez"
+              required
+            />
+          </div>
+
+          {/* --- NUEVO CAMPO: NÚMERO DE CELULAR --- */}
+          <div className="form-group">
+            <label htmlFor="celular">Número de Celular:</label>
+            <input
+              type="tel"
+              id="celular"
+              name="celular"
+              value={formData.celular}
+              onChange={handleChange}
+              placeholder="Ej. +56 9 1234 5678"
               required
             />
           </div>
