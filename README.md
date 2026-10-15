@@ -1,32 +1,36 @@
-# AquaChile - Sistema de Postulación (MVP)
-
-Aplicación desarrollada como Producto Mínimo Viable (MVP) para digitalizar y gestionar el proceso de reclutamiento de candidatos para AquaChile. El proyecto se enfoca en ofrecer una interfaz de usuario intuitiva y corporativa, estructurada para una próxima integración con una arquitectura backend transaccional.
+# AquaChile - Sistema Integral de Reclutamiento y Selección (MVP)
 
 ## Descripción del Proyecto
 
-El sistema permite a los aspirantes ingresar sus datos personales y profesionales de manera segura, e incluye la funcionalidad de adjuntar su Curriculum Vitae con validaciones de peso de archivo en el lado del cliente, garantizando la integridad inicial de los datos antes de su envío al servidor.
+Este proyecto consiste en un Producto Mínimo Viable (MVP) desarrollado para digitalizar, centralizar y optimizar el proceso de reclutamiento de personal para AquaChile. El sistema abarca el ciclo completo de selección, desde la recepción de postulaciones externas hasta la gestión, seguimiento y evaluación interna de los candidatos por parte del equipo de recursos humanos.
 
-## Tecnologías Utilizadas
+## Arquitectura del Sistema
 
-**Frontend:**
-* React (Entorno de desarrollo Vite)
-* JavaScript (JSX)
-* CSS3 (Diseño de interfaz basado en Glassmorphism)
+El proyecto está diseñado bajo una arquitectura cliente-servidor, estructurada en las siguientes capas tecnológicas:
 
-**Backend y Base de Datos (En desarrollo):**
-* Java (Spring Boot)
-* Relacional: MySQL
+*   **Frontend (Interfaz de Usuario):** Desarrollado con React (entorno Vite) y CSS3. Proporciona una experiencia de usuario fluida para los postulantes y una visualización clara para los administradores.
+*   **Backend (Lógica de Negocio):** API RESTful desarrollada en Java utilizando el framework Spring Boot (en fase de desarrollo e integración).
+*   **Base de Datos:** Implementada en MySQL para la persistencia relacional y segura de los datos corporativos.
 
-## Características Principales
+## Módulos Principales del Sistema
 
-* **Interfaz de Usuario (UI):** Diseño limpio y corporativo utilizando técnicas avanzadas de CSS (backdrop-filter) para un efecto de desenfoque, optimizado mediante el consumo de recursos estáticos locales.
-* **Validación de Formularios:** Captura estricta de datos obligatorios (Nombre, Teléfono, Familia de Cargo y Cargo) y validación de tamaño de archivos adjuntos (límite máximo de 5MB por documento).
-* **Gestión de Estados:** Manejo asíncrono y controlado de los campos del formulario mediante los hooks nativos de React, asegurando la limpieza de los datos tras un envío exitoso.
+1.  **Módulo de Postulación Externa:** Interfaz orientada a la captura de datos del aspirante (datos de contacto, cargo al que postula) y carga segura de Curriculum Vitae con validación de peso de archivos.
+2.  **Gestión de Usuarios y Roles:** Administración de perfiles internos del sistema (Analistas y Evaluadores) encargados de procesar las postulaciones.
+3.  **Seguimiento de Solicitudes:** Control del flujo y estado de cada postulación (Pendiente, En Proceso, Finalizada).
+4.  **Registro de Evaluaciones:** Almacenamiento estructurado de los resultados y observaciones de las entrevistas psicolaborales y técnicas vinculadas a cada solicitud.
 
-## Instrucciones de Despliegue Local (Frontend)
+## Estructura del Repositorio
 
-Para inicializar el entorno de desarrollo en una máquina local, ejecute los siguientes comandos en su terminal:
+El repositorio está organizado para separar claramente las capas de la aplicación:
+
+*   `/AquaChile_Form` (Frontend): Contiene el código fuente de la aplicación cliente en React.
+*   `/database`: Aloja los scripts de modelado SQL y diagramas de la base de datos relacional.
+*   `/backend` (Próximamente): Contendrá el código fuente de la aplicación Spring Boot.
+
+## Instrucciones de Despliegue Local (Entorno Frontend)
+
+Para inicializar la vista de usuario en un entorno de desarrollo local, siga estos pasos:
 
 1. **Clonar el repositorio:**
    ```bash
-   git clone [https://github.com/tu-usuario/AquaChile_Form.git](https://github.com/tu-usuario/AquaChile_Form.git)
+   git clone [https://github.com/tu-usuario/tu-repositorio.git](https://github.com/tu-usuario/tu-repositorio.git)
