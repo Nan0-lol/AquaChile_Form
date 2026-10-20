@@ -141,3 +141,10 @@ body::before {
 .btn-submit:active {
     transform: scale(0.98);
 }
+
+#root {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}

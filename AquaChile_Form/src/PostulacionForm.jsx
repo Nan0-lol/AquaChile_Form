@@ -4,7 +4,7 @@ import './index.css';
 const FormularioPostulacion = () => {
   const [formData, setFormData] = useState({
     nombreCompleto: '',
-    celular: '', // <-- Nuevo estado para el celular
+    celular: '', 
     familiaCargo: '',
     nombreCargo: '',
     cv: null,
@@ -41,7 +41,7 @@ const FormularioPostulacion = () => {
     // Limpiar los estados después de enviar
     setFormData({
       nombreCompleto: '',
-      celular: '', // <-- Se limpia el celular
+      celular: '', 
       familiaCargo: '',
       nombreCargo: '',
       cv: null,
@@ -52,7 +52,7 @@ const FormularioPostulacion = () => {
 
   return (
     <>
-      {/* Logo en la esquina superior izquierda */}
+      {/* Logo en la esquina superior izquierda desde la carpeta public */}
       <header className="header-logo">
         <img src="/logo.png" alt="Logo AquaChile" className="logo-esquina" />
       </header>
@@ -76,7 +76,6 @@ const FormularioPostulacion = () => {
             />
           </div>
 
-          {/* --- NUEVO CAMPO: NÚMERO DE CELULAR --- */}
           <div className="form-group">
             <label htmlFor="celular">Número de Celular:</label>
             <input
