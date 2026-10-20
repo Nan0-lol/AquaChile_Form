@@ -18,7 +18,7 @@ body {
     overflow: hidden;
 }
 
-/* --- FONDO DIFUMINADO AQUACHILE (SIN LÍNEAS ABAJO) --- */
+/* --- FONDO DIFUMINADO AQUACHILE --- */
 body::before {
     content: "";
     position: absolute;
@@ -26,19 +26,18 @@ body::before {
     left: -20px;
     right: -20px;
     bottom: -20px;
-    background-image: url('/fondo.png'); 
+    background-image: url('https://es.aquachile.com/wp-content/uploads/2021/07/quienes-somos.jpg'); 
     background-size: cover;
     background-position: center;
     filter: blur(8px) brightness(0.75); 
-    transform: scale(1.12); /* Estira la imagen más allá de los bordes para ocultar el halo */
     z-index: -1;
 }
 
 /* --- LOGO EN LA ESQUINA SUPERIOR IZQUIERDA --- */
 .header-logo {
     position: absolute;
-    top: 35px; 
-    left: 45px;
+    top: 15px; 
+    left: 40px;
     z-index: 2;
 }
 
@@ -91,6 +90,7 @@ body::before {
     margin-bottom: 8px;
 }
 
+/* AQUÍ ESTÁ EL ARREGLO: Agregamos input[type="tel"] */
 .form-group input[type="text"],
 .form-group input[type="tel"],
 .form-group select {
@@ -104,6 +104,7 @@ body::before {
     background-color: rgba(255, 255, 255, 0.9); 
 }
 
+/* Y también lo agregamos para el efecto cuando haces clic (focus) */
 .form-group input[type="text"]:focus,
 .form-group input[type="tel"]:focus,
 .form-group select:focus {
@@ -139,4 +140,11 @@ body::before {
 
 .btn-submit:active {
     transform: scale(0.98);
+}
+
+#root {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
