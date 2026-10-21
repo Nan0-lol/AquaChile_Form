@@ -18,6 +18,14 @@ body {
     overflow: hidden;
 }
 
+/* --- NUEVA REGLA PARA CENTRAR EL CONTENEDOR DE REACT --- */
+#root {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 /* --- FONDO DIFUMINADO AQUACHILE --- */
 body::before {
     content: "";
@@ -90,7 +98,6 @@ body::before {
     margin-bottom: 8px;
 }
 
-/* AQUÍ ESTÁ EL ARREGLO: Agregamos input[type="tel"] */
 .form-group input[type="text"],
 .form-group input[type="tel"],
 .form-group select {
@@ -104,7 +111,6 @@ body::before {
     background-color: rgba(255, 255, 255, 0.9); 
 }
 
-/* Y también lo agregamos para el efecto cuando haces clic (focus) */
 .form-group input[type="text"]:focus,
 .form-group input[type="tel"]:focus,
 .form-group select:focus {

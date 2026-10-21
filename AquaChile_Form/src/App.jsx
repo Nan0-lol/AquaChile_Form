@@ -1,18 +1,27 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
-import PostulacionForm from './PostulacionForm';
+import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import AppLayout from './layouts/AppLayout'
+import LoginPage from './pages/LoginPage';
+import FormularioPostulacion from './pages/PostulacionForm';
+import Dashboard from './pages/Dashboard'
+
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <div>
-      <PostulacionForm/>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+          <Route path="/home" element={<Dashboard/>}/>
+      </Routes>
+      <Routes>
+          <Route element={<AppLayout />}>
+          <Route path= "/" element={<FormularioPostulacion />}/>
+          <Route path="/login" element={<LoginPage/>}/>
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

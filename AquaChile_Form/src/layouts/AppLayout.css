@@ -1,0 +1,30 @@
+.app-layout { 
+    min-height: 100vh; 
+}
+
+.layout-main {
+    padding: 32px; 
+}
+
+.navbar {
+    display: flex;
+    gap: 20px;
+    padding: 16px 32px;
+    background-color: #002A54;
+}
+
+.navbar a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.navbar a.active {
+    border-bottom: 2px solid #00A3E0;
+}
+
+@media (max-width: 700px) {
+    .layout-main {
+        padding: 16px;
+    }
+}
