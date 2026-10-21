@@ -7,17 +7,6 @@
     padding: 0;
 }
 
-body {
-    font-family: 'Inter', Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    color: #333;
-    position: relative;
-    overflow: hidden;
-}
-
 /* --- FONDO DIFUMINADO AQUACHILE --- */
 body::before {
     content: "";
