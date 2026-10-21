@@ -7,7 +7,8 @@ import Dashboard from './pages/Dashboard'
 
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Estado para cambiar de vista fácilmente mientras desarrollamos
+  const [vistaActual, setVistaActual] = useState('dashboard');
 
   return (
     <BrowserRouter>
