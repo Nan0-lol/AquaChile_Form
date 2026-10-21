@@ -1,11 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Clock, MessageSquare, CheckCircle, Search, Bell, FileText, Eye, Settings, LogOut, User } from 'lucide-react';
+import { Users, Clock, MessageSquare, CheckCircle, Search, Bell, FileText, Eye, Settings, LogOut, User, X } from 'lucide-react';
 import './Dashboard.css';
 
-
-
-// Datos simulados para el Gráfico de Anillo (Familias de Cargo)
+// Datos simulados para el Gráfico de Anillo
 const dataFamilias = [
   { name: 'Operaciones', value: 82, color: '#0d9488' },
   { name: 'Tecnología / TI', value: 58, color: '#0284c7' },
@@ -13,7 +11,7 @@ const dataFamilias = [
   { name: 'Finanzas', value: 32, color: '#2dd4bf' },
 ];
 
-// Datos simulados para el Gráfico de Barras (Flujo Mensual)
+// Datos simulados para el Gráfico de Barras
 const dataMensual = [
   { mes: 'May', postulantes: 35 },
   { mes: 'Jun', postulantes: 42 },
@@ -24,7 +22,6 @@ const dataMensual = [
 ];
 
 // Datos simulados para la Tabla
-
 const candidatosRecientes = [
   { id: 'CF', nombre: 'Camila Fuentes Rojas', email: 'camila.fuentes@gmail.com', cargo: 'Jefa de Centro de Cultivo', familia: 'Operaciones', fecha: '17 oct 2026', estado: 'Pendiente' },
   { id: 'MS', nombre: 'Matías Soto Henríquez', email: 'msoto.henriquez@outlook.com', cargo: 'Desarrollador Full Stack', familia: 'Tecnología / TI', fecha: '16 oct 2026', estado: 'En proceso' },
@@ -36,10 +33,14 @@ const Dashboard = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('Todos');
   
-  // NUEVO: Referencia para decirle a la pantalla a dónde deslizarse
+  // Referencia para deslizar la pantalla
   const tablaRef = useRef(null);
 
-  // NUEVO: Función que filtra la tabla Y baja la pantalla suavemente
+  // Memoria para el Panel Lateral (Drawer)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [candidatoSeleccionado, setCandidatoSeleccionado] = useState(null);
+
+  // Funciones
   const aplicarFiltroYBajar = (estado) => {
     setFiltroEstado(estado);
     if (tablaRef.current) {
@@ -47,20 +48,26 @@ const Dashboard = () => {
     }
   };
 
-  // Lógica de filtrado (esto ya lo tenías)
+  const abrirDrawer = (candidato) => {
+    setCandidatoSeleccionado(candidato);
+    setIsDrawerOpen(true);
+  };
+
+  const cerrarDrawer = () => {
+    setIsDrawerOpen(false);
+  };
+
+  // Lógica de filtrado
   const candidatosFiltrados = candidatosRecientes.filter(candidato => {
-// ... el resto de tus contadores sigue igual ...
     if (filtroEstado === 'Todos') return true;
     return candidato.estado === filtroEstado;
   });
 
-  // Contadores dinámicos (calculan cuántos hay de cada estado automáticamente)
+  // Contadores dinámicos
   const countTodos = candidatosRecientes.length;
   const countPendiente = candidatosRecientes.filter(c => c.estado === 'Pendiente').length;
   const countEnProceso = candidatosRecientes.filter(c => c.estado === 'En proceso').length;
   const countFinalizada = candidatosRecientes.filter(c => c.estado === 'Finalizada').length;
-
-  
 
   return (
     <div className="dashboard-wrapper">
@@ -70,11 +77,8 @@ const Dashboard = () => {
         <div className="navbar-left">
           <div className="brand-logo">
             <img src="/logo.png" alt="AquaChile Logo" className="logo-img" />
-            {/* Se eliminó el texto redundante para mantener un diseño minimalista */}
           </div>
-          
           <div className="navbar-divider"></div>
-          
           <div className="breadcrumbs">
             <span className="crumb-muted">Inicio</span>
             <span className="crumb-separator">&gt;</span>
@@ -87,13 +91,11 @@ const Dashboard = () => {
             <Search className="search-icon" size={16} color="#94a3b8" />
             <input type="text" placeholder="Buscar en el portal..." />
           </div>
-
           <div className="notification-btn">
             <Bell size={18} color="#cbd5e1" />
             <span className="badge">3</span>
           </div>
-          
-{/* PERFIL DE USUARIO INTERACTIVO */}
+
           <div className="profile-container" style={{ position: 'relative' }}>
             <div 
               className="user-profile" 
@@ -107,11 +109,9 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* MENÚ DESPLEGABLE (Aparece solo si isProfileOpen es true) */}
             {isProfileOpen && (
               <div className="profile-dropdown">
                 <div className="dropdown-header">
-                  {/* Puse tu nombre completo para que se vea súper realista */}
                   <div className="dropdown-name">Diego Gonzalo Barría</div>
                   <div className="dropdown-email">d.barria@aquachile.com</div>
                 </div>
@@ -134,7 +134,6 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
-      
 
       {/* 2. CONTENIDO PRINCIPAL */}
       <main className="dashboard-content">
@@ -145,7 +144,6 @@ const Dashboard = () => {
 
         {/* 2.1 TARJETAS DE MÉTRICAS (KPIs) */}
         <div className="kpi-grid">
-          
           <div 
             className={`kpi-card ${filtroEstado === 'Todos' ? 'active-card' : ''}`}
             onClick={() => aplicarFiltroYBajar('Todos')}
@@ -207,37 +205,23 @@ const Dashboard = () => {
           </div>
         </div>
 
-
         {/* 2.2 SECCIÓN DE GRÁFICOS */}
         <div className="charts-grid">
-          
           <div className="chart-card">
             <h3 className="chart-title">Postulaciones por Familia de Cargo</h3>
             <p className="chart-subtitle">Distribución acumulada últimos 6 meses</p>
-            
             <div className="chart-container" style={{ height: '250px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={dataFamilias}
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
+                  <Pie data={dataFamilias} innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
                     {dataFamilias.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e2e8f0' }}
-                  />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }} itemStyle={{ color: '#e2e8f0' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
             <div className="chart-legend">
               {dataFamilias.map((item, i) => (
                 <div key={i} className="legend-item">
@@ -252,22 +236,17 @@ const Dashboard = () => {
           <div className="chart-card">
             <h3 className="chart-title">Flujo Mensual de Postulaciones</h3>
             <p className="chart-subtitle">Volumen de postulantes por mes, 2026</p>
-            
             <div className="chart-container" style={{ height: '300px', marginTop: '1rem' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dataMensual}>
                   <XAxis dataKey="mes" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }}
-                  />
+                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }} />
                   <Bar dataKey="postulantes" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={32} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
-
         </div>
 
         {/* 2.3 TABLA DE SOLICITUDES RECIENTES */}
@@ -279,34 +258,21 @@ const Dashboard = () => {
             </div>
             <div className="table-filters">
               <div className="status-tabs">
-                <span 
-                  className={`tab ${filtroEstado === 'Todos' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Todos')}
-                >
+                <span className={`tab ${filtroEstado === 'Todos' ? 'active' : ''}`} onClick={() => aplicarFiltroYBajar('Todos')}>
                   Todos <span className="tab-count">{countTodos}</span>
                 </span>
-                <span 
-                  className={`tab ${filtroEstado === 'Pendiente' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Pendiente')}
-                >
+                <span className={`tab ${filtroEstado === 'Pendiente' ? 'active' : ''}`} onClick={() => aplicarFiltroYBajar('Pendiente')}>
                   Pendiente <span className="tab-count">{countPendiente}</span>
                 </span>
-                <span 
-                  className={`tab ${filtroEstado === 'En proceso' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('En proceso')}
-                >
+                <span className={`tab ${filtroEstado === 'En proceso' ? 'active' : ''}`} onClick={() => aplicarFiltroYBajar('En proceso')}>
                   En proceso <span className="tab-count">{countEnProceso}</span>
                 </span>
-                <span 
-                  className={`tab ${filtroEstado === 'Finalizada' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Finalizada')}
-                >
+                <span className={`tab ${filtroEstado === 'Finalizada' ? 'active' : ''}`} onClick={() => aplicarFiltroYBajar('Finalizada')}>
                   Finalizada <span className="tab-count">{countFinalizada}</span>
                 </span>
               </div>
             </div>
           </div>
-
 
           <div className="table-container">
             <table className="data-table">
@@ -346,7 +312,7 @@ const Dashboard = () => {
                           <FileText size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom' }} /> 
                           Descargar CV
                         </button>
-                        <button className="btn-primary">
+                        <button className="btn-primary" onClick={() => abrirDrawer(cand)}>
                           <Eye size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom' }} /> 
                           Revisar
                         </button>
@@ -359,6 +325,58 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
+
+      {/* 3. PANEL LATERAL (DRAWER) DE REVISIÓN */}
+      <div className={`drawer-overlay ${isDrawerOpen ? 'open' : ''}`} onClick={cerrarDrawer}></div>
+      
+      <div className={`drawer-panel ${isDrawerOpen ? 'open' : ''}`}>
+        {candidatoSeleccionado && (
+          <div className="drawer-content">
+            <div className="drawer-header">
+              <h2>Detalle de Postulación</h2>
+              <button className="close-drawer-btn" onClick={cerrarDrawer}>
+                <X size={24} color="#94a3b8" />
+              </button>
+            </div>
+            
+            <div className="drawer-body">
+              <div className="drawer-profile-header">
+                <div className="drawer-avatar">{candidatoSeleccionado.id}</div>
+                <div>
+                  <h3>{candidatoSeleccionado.nombre}</h3>
+                  <p>{candidatoSeleccionado.email}</p>
+                </div>
+              </div>
+
+              <div className="drawer-section">
+                <h4>Información del Cargo</h4>
+                <div className="info-group">
+                  <span className="info-label">Cargo Postulado:</span>
+                  <span className="info-value">{candidatoSeleccionado.cargo}</span>
+                </div>
+                <div className="info-group">
+                  <span className="info-label">Familia:</span>
+                  <span className="badge-family">{candidatoSeleccionado.familia}</span>
+                </div>
+                <div className="info-group">
+                  <span className="info-label">Fecha de Envío:</span>
+                  <span className="info-value">{candidatoSeleccionado.fecha}</span>
+                </div>
+              </div>
+
+              <div className="drawer-section">
+                <h4>Cambiar Estado</h4>
+                <select className="status-select" defaultValue={candidatoSeleccionado.estado}>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="En proceso">En proceso</option>
+                  <option value="Finalizada">Finalizada</option>
+                </select>
+                <button className="btn-submit" style={{ marginTop: '1rem' }}>Guardar Cambios</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
     </div>
   );
