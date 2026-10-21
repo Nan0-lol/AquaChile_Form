@@ -30,8 +30,10 @@ const candidatosRecientes = [
 
 const Dashboard = () => {
   // Estados de la interfaz
+  // Estados de la interfaz
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [filtroEstado, setFiltroEstado] = useState('Todos');
+  const [terminoBusqueda, setTerminoBusqueda] = useState(''); // NUEVO: Memoria del buscador
   
   // Referencia para deslizar la pantalla
   const tablaRef = useRef(null);
@@ -56,11 +58,20 @@ const Dashboard = () => {
   const cerrarDrawer = () => {
     setIsDrawerOpen(false);
   };
-
-  // Lógica de filtrado
+  // Lógica de filtrado combinado (Estado + Buscador)
   const candidatosFiltrados = candidatosRecientes.filter(candidato => {
-    if (filtroEstado === 'Todos') return true;
-    return candidato.estado === filtroEstado;
+    // 1. Revisa si cumple con la pestaña seleccionada
+    const cumpleEstado = filtroEstado === 'Todos' || candidato.estado === filtroEstado;
+    
+    // 2. Revisa si el nombre, cargo o familia incluye lo que escribimos (ignorando mayúsculas)
+    const textoBuscado = terminoBusqueda.toLowerCase();
+    const cumpleBusqueda = 
+      candidato.nombre.toLowerCase().includes(textoBuscado) ||
+      candidato.cargo.toLowerCase().includes(textoBuscado) ||
+      candidato.familia.toLowerCase().includes(textoBuscado);
+
+    // Muestra al candidato solo si cumple ambas condiciones
+    return cumpleEstado && cumpleBusqueda;
   });
 
   // Contadores dinámicos
@@ -87,10 +98,45 @@ const Dashboard = () => {
         </div>
 
         <div className="navbar-right">
-          <div className="search-box">
-            <Search className="search-icon" size={16} color="#94a3b8" />
-            <input type="text" placeholder="Buscar en el portal..." />
+          {/* Contenedor relativo para que la lista flote justo debajo */}
+          <div className="search-container" style={{ position: 'relative' }}>
+            <div className="search-box">
+              <Search className="search-icon" size={16} color="#94a3b8" />
+              <input 
+                type="text" 
+                placeholder="Buscar por nombre o cargo..." 
+                value={terminoBusqueda}
+                onChange={(e) => setTerminoBusqueda(e.target.value)}
+              />
+            </div>
+
+            {/* Menú desplegable de resultados que solo aparece si escribes algo */}
+            {terminoBusqueda.length > 0 && (
+              <div className="search-dropdown">
+                {candidatosFiltrados.length > 0 ? (
+                  candidatosFiltrados.map((cand, index) => (
+                    <div 
+                      key={index} 
+                      className="search-result-item"
+                      onClick={() => {
+                        abrirDrawer(cand); // Abre el panel lateral al instante
+                        setTerminoBusqueda(''); // Limpia el buscador
+                      }}
+                    >
+                      <div className="candidate-avatar">{cand.id}</div>
+                      <div>
+                        <div className="candidate-name">{cand.nombre}</div>
+                        <div className="candidate-email">{cand.cargo}</div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="search-no-results">No se encontraron candidatos</div>
+                )}
+              </div>
+            )}
           </div>
+          
           <div className="notification-btn">
             <Bell size={18} color="#cbd5e1" />
             <span className="badge">3</span>
