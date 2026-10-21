@@ -663,3 +663,10 @@ body, #root, html {
 .dropdown-item.logout:hover {
   background: rgba(239, 68, 68, 0.1);
 }
+/* --- TARJETA ACTIVA AL HACER CLIC --- */
+.kpi-card.active-card {
+  border-color: #0284c7;
+  background: rgba(2, 132, 199, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px 0 rgba(2, 132, 199, 0.2);
+}

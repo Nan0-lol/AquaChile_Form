@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Clock, MessageSquare, CheckCircle, Search, Bell, FileText, Eye, Settings, LogOut, User } from 'lucide-react';
 import './Dashboard.css';
+
+
 
 // Datos simulados para el Gráfico de Anillo (Familias de Cargo)
 const dataFamilias = [
@@ -22,6 +24,7 @@ const dataMensual = [
 ];
 
 // Datos simulados para la Tabla
+
 const candidatosRecientes = [
   { id: 'CF', nombre: 'Camila Fuentes Rojas', email: 'camila.fuentes@gmail.com', cargo: 'Jefa de Centro de Cultivo', familia: 'Operaciones', fecha: '17 oct 2026', estado: 'Pendiente' },
   { id: 'MS', nombre: 'Matías Soto Henríquez', email: 'msoto.henriquez@outlook.com', cargo: 'Desarrollador Full Stack', familia: 'Tecnología / TI', fecha: '16 oct 2026', estado: 'En proceso' },
@@ -31,10 +34,22 @@ const candidatosRecientes = [
 const Dashboard = () => {
   // Estados de la interfaz
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [filtroEstado, setFiltroEstado] = useState('Todos'); // Memoria del filtro seleccionado
+  const [filtroEstado, setFiltroEstado] = useState('Todos');
+  
+  // NUEVO: Referencia para decirle a la pantalla a dónde deslizarse
+  const tablaRef = useRef(null);
 
-  // Lógica de filtrado: Decide qué candidatos mostrar según la pestaña activa
+  // NUEVO: Función que filtra la tabla Y baja la pantalla suavemente
+  const aplicarFiltroYBajar = (estado) => {
+    setFiltroEstado(estado);
+    if (tablaRef.current) {
+      tablaRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  // Lógica de filtrado (esto ya lo tenías)
   const candidatosFiltrados = candidatosRecientes.filter(candidato => {
+// ... el resto de tus contadores sigue igual ...
     if (filtroEstado === 'Todos') return true;
     return candidato.estado === filtroEstado;
   });
@@ -44,6 +59,8 @@ const Dashboard = () => {
   const countPendiente = candidatosRecientes.filter(c => c.estado === 'Pendiente').length;
   const countEnProceso = candidatosRecientes.filter(c => c.estado === 'En proceso').length;
   const countFinalizada = candidatosRecientes.filter(c => c.estado === 'Finalizada').length;
+
+  
 
   return (
     <div className="dashboard-wrapper">
@@ -125,53 +142,71 @@ const Dashboard = () => {
           <h1>Panel de Reclutamiento</h1>
           <p>Seguimiento de postulaciones y procesos de selección de AquaChile.</p>
         </div>
+
         {/* 2.1 TARJETAS DE MÉTRICAS (KPIs) */}
         <div className="kpi-grid">
           
-          <div className="kpi-card">
+          <div 
+            className={`kpi-card ${filtroEstado === 'Todos' ? 'active-card' : ''}`}
+            onClick={() => aplicarFiltroYBajar('Todos')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="kpi-header">
               <span className="kpi-title">Total Postulantes</span>
               <span className="kpi-icon"><Users size={20} color="#e2e8f0" /></span>
             </div>
-            <div className="kpi-value">248</div>
+            <div className="kpi-value">{countTodos}</div>
             <div className="kpi-footer text-emerald">
               +12.4% <span className="kpi-muted">Últimos 6 meses</span>
             </div>
           </div>
 
-          <div className="kpi-card">
+          <div 
+            className={`kpi-card ${filtroEstado === 'Pendiente' ? 'active-card' : ''}`}
+            onClick={() => aplicarFiltroYBajar('Pendiente')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="kpi-header">
               <span className="kpi-title">Pendientes</span>
               <span className="kpi-icon alert-icon"><Clock size={20} /></span>
             </div>
-            <div className="kpi-value">64</div>
+            <div className="kpi-value">{countPendiente}</div>
             <div className="kpi-footer">
               26% del total <span className="kpi-muted">CVs esperando revisión</span>
             </div>
           </div>
 
-          <div className="kpi-card">
+          <div 
+            className={`kpi-card ${filtroEstado === 'En proceso' ? 'active-card' : ''}`}
+            onClick={() => aplicarFiltroYBajar('En proceso')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="kpi-header">
               <span className="kpi-title">En Proceso</span>
               <span className="kpi-icon process-icon"><MessageSquare size={20} /></span>
             </div>
-            <div className="kpi-value">97</div>
+            <div className="kpi-value">{countEnProceso}</div>
             <div className="kpi-footer">
               39% del total <span className="kpi-muted">Entrevistas y evaluaciones</span>
             </div>
           </div>
 
-          <div className="kpi-card">
+          <div 
+            className={`kpi-card ${filtroEstado === 'Finalizada' ? 'active-card' : ''}`}
+            onClick={() => aplicarFiltroYBajar('Finalizada')}
+            style={{ cursor: 'pointer' }}
+          >
             <div className="kpi-header">
               <span className="kpi-title">Finalizados</span>
               <span className="kpi-icon success-icon"><CheckCircle size={20} /></span>
             </div>
-            <div className="kpi-value">87</div>
+            <div className="kpi-value">{countFinalizada}</div>
             <div className="kpi-footer">
               35% del total <span className="kpi-muted">Procesos cerrados</span>
             </div>
           </div>
         </div>
+
 
         {/* 2.2 SECCIÓN DE GRÁFICOS */}
         <div className="charts-grid">
@@ -236,7 +271,7 @@ const Dashboard = () => {
         </div>
 
         {/* 2.3 TABLA DE SOLICITUDES RECIENTES */}
-        <div className="table-card">
+        <div className="table-card" ref={tablaRef}>
           <div className="table-header">
             <div>
               <h3>Solicitudes Recientes</h3>
