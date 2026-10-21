@@ -1,5 +1,5 @@
+import {Link} from 'react-router-dom'
 import React, { useState } from 'react';
-import './index.css'; 
 
 const FormularioPostulacion = () => {
   const [formData, setFormData] = useState({
@@ -41,7 +41,7 @@ const FormularioPostulacion = () => {
     // Limpiar los estados después de enviar
     setFormData({
       nombreCompleto: '',
-      celular: '', 
+      celular: '',
       familiaCargo: '',
       nombreCargo: '',
       cv: null,
