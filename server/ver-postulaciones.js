@@ -12,10 +12,12 @@ if (filas.length > 0) {
     filas.map((f) => ({
       fecha: f.creado_en,
       nombre: f.nombre_completo,
+      rut: f.rut,
       correo: f.correo,
       celular: f.celular,
-      familia: f.familia_cargo,
+      area: f.familia_cargo,
       cargo: f.nombre_cargo,
+      estado: f.estado,
       cv: f.cv_archivo,
     }))
   );

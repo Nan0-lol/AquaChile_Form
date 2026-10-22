@@ -5,10 +5,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { validarCampos, validarArchivo } from './validaciones.js';
+import { validarCampos, validarArchivo, ESTADOS } from './validaciones.js';
 import { crearRepositorio } from './db.js';
 import { crearServicioCorreo } from './correo.js';
-import { crearLimitador, cabecerasSeguridad, esBot } from './seguridad.js';
+import { crearLimitador, cabecerasSeguridad, esBot, crearAutenticador } from './seguridad.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3001;
@@ -21,6 +21,22 @@ const PRODUCCION = process.env.NODE_ENV === 'production';
 // Máximo de envíos por IP en la ventana de tiempo (se puede ajustar con variables de entorno).
 const LIMITE_ENVIOS = Number(process.env.LIMITE_ENVIOS) || 5;
 const VENTANA_MINUTOS = Number(process.env.VENTANA_MINUTOS) || 15;
+
+// --- Credenciales del panel de administración ---
+// Defínelas en server/.env (ese archivo NO se sube a GitHub):
+//   ADMIN_USUARIO=reclutamiento
+//   ADMIN_PASSWORD=una-clave-larga-y-segura
+let ADMIN_USUARIO = process.env.ADMIN_USUARIO;
+let ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_USUARIO || !ADMIN_PASSWORD) {
+  if (PRODUCCION) {
+    console.error('Faltan ADMIN_USUARIO y ADMIN_PASSWORD. El servidor no arranca sin ellas en producción.');
+    process.exit(1);
+  }
+  ADMIN_USUARIO = 'admin';
+  ADMIN_PASSWORD = 'admin123';
+  console.warn('Aviso: usando credenciales de desarrollo (admin / admin123). Defínelas en server/.env.');
+}
 
 fs.mkdirSync(CARPETA_CV, { recursive: true });
 
@@ -42,7 +58,7 @@ const upload = multer({
   limits: {
     fileSize: TAMANO_MAXIMO,
     files: 1,
-    fields: 10, // cantidad de campos de texto
+    fields: 12, // cantidad de campos de texto
     fieldSize: 10 * 1024, // 10 KB por campo
     fieldNameSize: 100,
     parts: 15,
@@ -71,6 +87,31 @@ const limitarEnvios = crearLimitador({
   maximo: LIMITE_ENVIOS,
 });
 
+// Frena a quien intente adivinar la contraseña: 10 intentos cada 15 minutos por IP
+const limitarLogin = crearLimitador({
+  ventanaMs: 15 * 60 * 1000,
+  maximo: 10,
+  mensaje: 'Demasiados intentos de inicio de sesión. Espera unos minutos.',
+});
+
+const auth = crearAutenticador({ usuario: ADMIN_USUARIO, password: ADMIN_PASSWORD });
+
+// Forma en que el dashboard recibe cada postulación (nunca expone la ruta interna del CV)
+const aPublico = (f) => ({
+  id: f.id,
+  nombre: f.nombre_completo,
+  rut: f.rut,
+  correo: f.correo,
+  telefono: f.celular,
+  area: f.familia_cargo,
+  cargo: f.nombre_cargo,
+  carta: f.carta,
+  cvNombre: f.cv_nombre_original,
+  cvBytes: f.cv_bytes,
+  fecha: f.creado_en,
+  estado: f.estado || 'pendiente',
+});
+
 const app = express();
 app.disable('x-powered-by');
 
@@ -82,7 +123,15 @@ if (process.env.TRUST_PROXY) {
 }
 
 app.use(cabecerasSeguridad({ produccion: PRODUCCION }));
-app.use(cors({ origin: ORIGEN_PERMITIDO }));
+app.use(
+  cors({
+    origin: ORIGEN_PERMITIDO,
+    methods: ['GET', 'POST', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Disposition'],
+  })
+);
+app.use(express.json({ limit: '10kb' }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
@@ -143,6 +192,52 @@ app.post('/api/postulaciones', limitarEnvios, upload.single('cv'), async (req, r
     await borrarArchivo(req.file);
     next(err);
   }
+});
+
+// =====================================================================
+// PANEL DE ADMINISTRACIÓN (todas estas rutas exigen haber iniciado sesión)
+// =====================================================================
+app.post('/api/login', limitarLogin, (req, res) => {
+  const { usuario, password } = req.body || {};
+  const sesion = auth.iniciar(usuario, password);
+  if (!sesion) {
+    return res.status(401).json({ ok: false, mensaje: 'Usuario o contraseña incorrectos.' });
+  }
+  res.json({ ok: true, ...sesion });
+});
+
+app.post('/api/logout', (req, res) => {
+  auth.cerrar(req);
+  res.json({ ok: true });
+});
+
+app.get('/api/postulaciones', auth.requerir, (_req, res) => {
+  res.json(repo.listar().map(aPublico));
+});
+
+app.patch('/api/postulaciones/:id/estado', auth.requerir, (req, res) => {
+  const estado = req.body?.estado;
+  if (!ESTADOS.includes(estado)) {
+    return res.status(400).json({ ok: false, mensaje: 'Estado no válido.' });
+  }
+  const actualizada = repo.actualizarEstado(req.params.id, estado);
+  if (!actualizada) {
+    return res.status(404).json({ ok: false, mensaje: 'Postulación no encontrada.' });
+  }
+  res.json({ ok: true });
+});
+
+app.get('/api/postulaciones/:id/cv', auth.requerir, (req, res) => {
+  const fila = repo.obtener(req.params.id);
+  if (!fila) {
+    return res.status(404).json({ ok: false, mensaje: 'Postulación no encontrada.' });
+  }
+  // basename: aunque alguien manipulara la base, nunca se sale de la carpeta uploads
+  const ruta = path.join(CARPETA_CV, path.basename(fila.cv_archivo));
+  if (!fs.existsSync(ruta)) {
+    return res.status(404).json({ ok: false, mensaje: 'El archivo del CV ya no existe.' });
+  }
+  res.download(ruta, fila.cv_nombre_original);
 });
 
 // --- Manejo de errores (multer y otros) ---

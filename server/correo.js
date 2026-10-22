@@ -4,13 +4,7 @@
 // y en la terminal aparece un enlace para ver cómo habría llegado.
 // Para enviar correos reales, define las variables SMTP_* (ver más abajo).
 
-const NOMBRES_FAMILIA = {
-  tecnologia: 'Tecnología / TI',
-  recursos_humanos: 'Recursos Humanos',
-  ventas: 'Ventas / Comercial',
-  operaciones: 'Operaciones',
-  finanzas: 'Finanzas',
-};
+import { AREAS } from './validaciones.js';
 
 // Todo lo que escribió el usuario se escapa antes de entrar al HTML del correo.
 export function escaparHtml(valor = '') {
@@ -24,7 +18,7 @@ export function escaparHtml(valor = '') {
 
 export function construirCorreo(datos, empresa = 'Equipo de Reclutamiento') {
   const primerNombre = (datos.nombreCompleto || '').trim().split(/\s+/)[0] || '';
-  const familia = NOMBRES_FAMILIA[datos.familiaCargo] || datos.familiaCargo || '';
+  const familia = AREAS[datos.area] || datos.area || '';
   const cargo = datos.nombreCargo || '';
 
   const saludo = primerNombre ? `Hola ${primerNombre},` : 'Hola,';
@@ -47,7 +41,7 @@ export function construirCorreo(datos, empresa = 'Equipo de Reclutamiento') {
 <html lang="es">
   <body style="margin:0;padding:24px;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
-      <div style="background:#002A54;color:#ffffff;padding:18px 24px;font-size:18px;font-weight:bold;">
+      <div style="background:#3e5463;color:#ffffff;padding:18px 24px;font-size:18px;font-weight:bold;">
         Recibimos tu postulación
       </div>
       <div style="padding:24px;font-size:15px;line-height:1.55;">

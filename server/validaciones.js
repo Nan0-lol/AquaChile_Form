@@ -1,21 +1,55 @@
 import fs from 'node:fs/promises';
 
-// Debe coincidir con las opciones del <select> del formulario.
-export const FAMILIAS_CARGO = [
-  'tecnologia',
-  'recursos_humanos',
-  'ventas',
-  'operaciones',
-  'finanzas',
-];
+// Debe coincidir con las opciones del <select> "Área de interés" del formulario.
+export const AREAS = {
+  planta: 'Plantas de Proceso',
+  piscicultura: 'Pisciculturas',
+  administracion: 'Administración y Finanzas',
+  comercial: 'Área Comercial',
+};
+
+// Etapas del proceso que maneja el dashboard.
+export const ESTADOS = ['pendiente', 'revision', 'entrevista', 'finalizado'];
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // Celular chileno: +56 9 1234 5678, 56912345678, 9 1234 5678, etc.
 const REGEX_CELULAR = /^(\+?56)?\s?9\s?\d{4}\s?\d{4}$/;
 // Caracteres de control (saltos de línea, tabulaciones, etc.)
 const REGEX_CONTROL = /[\u0000-\u001F\u007F]/;
+// Igual que el anterior, pero permite saltos de línea (para la carta)
+const REGEX_CONTROL_MULTILINEA = /[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/;
+
+const MAX_CARTA = 3000;
 
 const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
+
+// ---------- RUT ----------
+const limpiarRut = (rut) => rut.replace(/[^0-9kK]/g, '').toUpperCase();
+
+/** Valida el dígito verificador con módulo 11. */
+export function rutEsValido(rut = '') {
+  const limpio = limpiarRut(rut);
+  if (limpio.length < 8 || limpio.length > 9) return false;
+  const cuerpo = limpio.slice(0, -1);
+  const dv = limpio.slice(-1);
+  if (!/^\d+$/.test(cuerpo)) return false;
+  let suma = 0;
+  let multiplo = 2;
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * multiplo;
+    multiplo = multiplo === 7 ? 2 : multiplo + 1;
+  }
+  const resto = 11 - (suma % 11);
+  const esperado = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
+  return dv === esperado;
+}
+
+/** 12345678k -> 12.345.678-K (siempre se guarda con este formato). */
+export function formatearRut(rut = '') {
+  const limpio = limpiarRut(rut);
+  const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${cuerpo}-${limpio.slice(-1)}`;
+}
 
 /**
  * Valida y limpia los campos de texto de la postulación.
@@ -25,10 +59,13 @@ export function validarCampos(body = {}) {
   const errores = [];
 
   const nombreCompleto = texto(body.nombreCompleto);
+  const rutCrudo = texto(body.rut);
   const correo = texto(body.correo).toLowerCase();
   const celularCrudo = texto(body.celular);
-  const familiaCargo = texto(body.familiaCargo);
+  const area = texto(body.area);
   const nombreCargo = texto(body.nombreCargo);
+  const carta = texto(body.carta);
+  const consentimiento = texto(body.consentimiento) === 'true';
 
   if (
     nombreCompleto.length < 3 ||
@@ -36,6 +73,13 @@ export function validarCampos(body = {}) {
     REGEX_CONTROL.test(nombreCompleto)
   ) {
     errores.push('El nombre debe tener entre 3 y 100 caracteres.');
+  }
+
+  let rut = rutCrudo;
+  if (rutEsValido(rutCrudo)) {
+    rut = formatearRut(rutCrudo);
+  } else {
+    errores.push('El RUT no es válido.');
   }
 
   if (correo.length > 254 || !REGEX_CORREO.test(correo)) {
@@ -50,8 +94,8 @@ export function validarCampos(body = {}) {
     errores.push('El número de celular no es válido.');
   }
 
-  if (!FAMILIAS_CARGO.includes(familiaCargo)) {
-    errores.push('La familia de cargo no es válida.');
+  if (!Object.hasOwn(AREAS, area)) {
+    errores.push('El área de interés no es válida.');
   }
 
   if (
@@ -59,12 +103,20 @@ export function validarCampos(body = {}) {
     nombreCargo.length > 100 ||
     REGEX_CONTROL.test(nombreCargo)
   ) {
-    errores.push('El nombre del cargo debe tener entre 2 y 100 caracteres.');
+    errores.push('El cargo debe tener entre 2 y 100 caracteres.');
+  }
+
+  if (carta.length > MAX_CARTA || REGEX_CONTROL_MULTILINEA.test(carta)) {
+    errores.push(`La carta de presentación puede tener hasta ${MAX_CARTA} caracteres.`);
+  }
+
+  if (!consentimiento) {
+    errores.push('Debes aceptar el tratamiento de tus datos personales.');
   }
 
   return {
     errores,
-    datos: { nombreCompleto, correo, celular, familiaCargo, nombreCargo },
+    datos: { nombreCompleto, rut, correo, celular, area, nombreCargo, carta },
   };
 }
 

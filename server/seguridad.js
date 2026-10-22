@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 // Medidas de seguridad del formulario público. No necesita instalar paquetes.
 
 /**
@@ -79,4 +81,73 @@ export function esBot(body = {}) {
   const valor = body?.[CAMPO_TRAMPA];
   if (Array.isArray(valor)) return valor.length > 0;
   return typeof valor === 'string' ? valor.trim() !== '' : valor != null;
+}
+// =====================================================================
+// LOGIN DE ADMINISTRADORES
+// - La contraseña nunca se guarda en el navegador ni se compara en texto plano:
+//   el servidor la transforma con scrypt y compara en tiempo constante.
+// - Al iniciar sesión se entrega un token aleatorio que vence en unas horas.
+// - Las sesiones viven en memoria: si reinicias el servidor, hay que volver a entrar.
+// =====================================================================
+const derivar = (texto, sal) => crypto.scryptSync(String(texto), sal, 64);
+
+export function crearAutenticador({
+  usuario,
+  password,
+  duracionMs = 8 * 60 * 60 * 1000, // 8 horas
+  ahora = () => Date.now(),
+} = {}) {
+  // Se guarda solo la derivación, no la contraseña
+  const sal = crypto.randomBytes(16);
+  const usuarioEsperado = derivar(usuario, sal);
+  const passwordEsperada = derivar(password, sal);
+  const sesiones = new Map(); // token -> { usuario, vence }
+
+  const limpiar = () => {
+    const t = ahora();
+    for (const [token, s] of sesiones) if (s.vence <= t) sesiones.delete(token);
+  };
+  const intervalo = setInterval(limpiar, 10 * 60 * 1000);
+  intervalo.unref?.();
+
+  const tokenDe = (req) => {
+    const cabecera = req.headers.authorization || '';
+    return cabecera.startsWith('Bearer ') ? cabecera.slice(7).trim() : '';
+  };
+
+  return {
+    /** Devuelve { token, usuario, venceEn } o null si las credenciales no coinciden. */
+    iniciar(usuarioIngresado, passwordIngresada) {
+      if (typeof usuarioIngresado !== 'string' || typeof passwordIngresada !== 'string') {
+        return null;
+      }
+      // Se comparan ambos siempre (aunque el usuario falle) para no revelar cuál estuvo mal
+      const okUsuario = crypto.timingSafeEqual(derivar(usuarioIngresado, sal), usuarioEsperado);
+      const okPassword = crypto.timingSafeEqual(derivar(passwordIngresada, sal), passwordEsperada);
+      if (!okUsuario || !okPassword) return null;
+
+      const token = crypto.randomBytes(32).toString('hex');
+      const vence = ahora() + duracionMs;
+      sesiones.set(token, { usuario: usuarioIngresado, vence });
+      return { token, usuario: usuarioIngresado, venceEn: new Date(vence).toISOString() };
+    },
+
+    cerrar(req) {
+      sesiones.delete(tokenDe(req));
+    },
+
+    /** Middleware: deja pasar solo si el token es válido y no ha vencido. */
+    requerir(req, res, next) {
+      const token = tokenDe(req);
+      const sesion = token ? sesiones.get(token) : null;
+      if (!sesion || sesion.vence <= ahora()) {
+        if (sesion) sesiones.delete(token);
+        return res.status(401).json({ ok: false, mensaje: 'Tu sesión expiró. Vuelve a iniciar sesión.' });
+      }
+      req.usuario = sesion.usuario;
+      next();
+    },
+
+    detener: () => clearInterval(intervalo),
+  };
 }
