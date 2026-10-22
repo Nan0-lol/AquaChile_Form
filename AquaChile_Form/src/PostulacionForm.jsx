@@ -52,11 +52,6 @@ const FormularioPostulacion = () => {
 
   return (
     <>
-      {/* Logo en la esquina superior izquierda desde la carpeta public */}
-      <header className="header-logo">
-        <img src="/logo.png" alt="Logo AquaChile" className="logo-esquina" />
-      </header>
-
       {/* Tarjeta del formulario con efecto Glassmorphism */}
       <div className="form-container">
         <h2>Formulario de Postulación</h2>

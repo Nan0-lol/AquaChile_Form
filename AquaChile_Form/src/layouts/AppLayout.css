@@ -1,30 +1,277 @@
-.app-layout { 
-    min-height: 100vh; 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.layout-main {
-    padding: 32px; 
+body, html {
+  width: 100%;
+  height: 100%; /* Forzamos el alto exacto */
+  font-family: 'Inter', sans-serif;
+  overflow: hidden; /* Esto asesina las barras de scroll verticales y horizontales */
 }
 
-.navbar {
-    display: flex;
-    gap: 20px;
-    padding: 16px 32px;
-    background-color: #002A54;
+/* --- ENVOLTORIO PRINCIPAL --- */
+.layout-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
 }
 
-.navbar a {
-    color: white;
-    text-decoration: none;
-    font-weight: 600;
+/* --- FONDO DIFUMINADO AQUACHILE --- */
+body::before {
+  content: "";
+  position: fixed; 
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url('https://es.aquachile.com/wp-content/uploads/2021/07/quienes-somos.jpg');
+  background-size: cover;
+  background-position: center;
+  filter: blur(8px) brightness(0.75);
+  z-index: -1;
+  transform: scale(1.05); /* Evita bordes blancos por el blur */
 }
 
-.navbar a.active {
-    border-bottom: 2px solid #00A3E0;
+/* --- NAVBAR GLOBAL PREMIUM --- */
+.global-navbar {
+  background-color: #002A54; 
+  width: 100%;
+  height: 75px; /* Un poco más alto para mayor elegancia */
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08); /* Línea sutil en lugar de sombra tosca */
 }
 
-@media (max-width: 700px) {
-    .layout-main {
-        padding: 16px;
-    }
+.navbar-container {
+  width: 100%;
+  max-width: 100%; /* Permite que se estire por toda la pantalla */
+  padding: 0 60px; /* Empuja los elementos hacia los extremos */
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo {
+  height: 42px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.navbar-logo:hover {
+  opacity: 0.85;
+}
+
+/* --- ENLACES DEL MENÚ --- */
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 30px; /* Más espacio entre opciones */
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.7); /* Gris claro muy elegante */
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  transition: all 0.3s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  color: #ffffff; /* Brilla al pasar el mouse */
+}
+
+/* Botón especial para Login (Estilo Píldora Minimalista) */
+.btn-login {
+  background-color: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 10px 26px;
+  border-radius: 50px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-login:hover {
+  background-color: #ffffff;
+  color: #002A54;
+  border-color: #ffffff;
+}
+
+.btn-login:active {
+  transform: scale(0.97);
+}
+
+/* --- ÁREA DE CONTENIDO --- */
+.layout-content {
+  flex: 1;
+  margin-top: 75px; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: calc(100vh - 75px); /* Alto exacto menos el navbar */
+}
+
+/* --- TARJETA DEL FORMULARIO --- */
+.form-container {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 40px;
+  border-radius: 12px; /* Bordes un poco más refinados */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  max-width: 550px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  z-index: 1;
+}
+
+.form-container h2 {
+  color: #002A54;
+  margin-bottom: 25px;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="tel"],
+.form-group select {
+  padding: 11px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s ease;
+  background-color: #f8fafc;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="tel"]:focus,
+.form-group select:focus {
+  border-color: #0066FF;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
+}
+
+.form-group input[type="file"] {
+  font-size: 13px;
+  padding: 8px 0;
+  color: #475569;
+}
+
+.btn-submit {
+  background-color: #002A54;
+  color: #ffffff;
+  border: none;
+  padding: 14px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 15px;
+  transition: background-color 0.2s ease;
+}
+
+.btn-submit:hover {
+  background-color: #001e3b;
+}
+
+/* --- VENTANA EMERGENTE (MODAL MINIMALISTA) --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 40px 50px; 
+  border-radius: 8px;
+  text-align: center;
+  max-width: 500px; 
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: popIn 0.3s ease-out forwards;
+}
+
+.modal-close-icon {
+  position: absolute;
+  top: 15px; right: 20px;
+  background: transparent; border: none;
+  font-size: 28px; color: #94a3b8;
+  cursor: pointer; padding: 0; line-height: 1;
+}
+
+.modal-close-icon:hover { color: #475569; }
+
+.modal-icon-container {
+  width: 64px; height: 64px;
+  margin: 0 auto 20px auto;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+
+.icon-success { color: #10b981; width: 32px; height: 32px; display: block; }
+.modal-content.exito .modal-icon-container { border: 2.5px solid #10b981; background: #ecfdf5; }
+
+.icon-error { color: #ef4444; width: 32px; height: 32px; display: block; }
+.modal-content.error .modal-icon-container { border: 2.5px solid #ef4444; background: #fef2f2; }
+
+.modal-content h3 {
+  font-size: 22px; margin-bottom: 12px; color: #0f172a; font-weight: 700;
+}
+
+.modal-content p {
+  color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; 
+  border-radius: 6px; font-size: 14px; line-height: 1.6;
+  margin-bottom: 25px; padding: 12px 16px; 
+}
+
+.modal-action-btn {
+  background: #0066FF; color: #ffffff; border: none;
+  padding: 10px 35px; border-radius: 6px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+
+.modal-action-btn:hover { background: #0052cc; }
+.modal-content.error .modal-action-btn { background: #ef4444; }
+.modal-content.error .modal-action-btn:hover { background: #dc2626; }
+
+@keyframes popIn {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
