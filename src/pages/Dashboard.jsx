@@ -1,330 +1,870 @@
-import React, { useState } from 'react';
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, Clock, MessageSquare, CheckCircle, Search, Bell, FileText, Eye, Settings, LogOut, User } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  FaUsers,
+  FaRegClock,
+  FaSearch,
+  FaRegCalendarCheck,
+  FaCheckCircle,
+  FaFileDownload,
+  FaEye,
+  FaSignOutAlt,
+  FaSyncAlt,
+  FaFileExcel,
+  FaTimes,
+  FaEnvelope,
+  FaPhoneAlt,
+  FaWhatsapp,
+  FaIdCard,
+  FaBriefcase,
+  FaInbox,
+  FaExternalLinkAlt,
+  FaChevronLeft,
+  FaChevronRight,
+  FaExclamationTriangle,
+  FaRegCopy,
+  FaChartBar,
+  FaSearchPlus,
+  FaRegFileAlt,
+} from 'react-icons/fa';
+import * as auth from '../auth';
+import {
+  AREAS,
+  ESTADOS,
+  ORDEN_ESTADOS,
+  obtenerPostulaciones,
+  actualizarEstado,
+  descargarCv,
+} from '../services/postulaciones';
 import './Dashboard.css';
 
-// Datos simulados para el Gráfico de Anillo (Familias de Cargo)
-const dataFamilias = [
-  { name: 'Operaciones', value: 82, color: '#0d9488' },
-  { name: 'Tecnología / TI', value: 58, color: '#0284c7' },
-  { name: 'Ventas / Comercial', value: 47, color: '#3b82f6' },
-  { name: 'Finanzas', value: 32, color: '#2dd4bf' },
-];
+const POR_PAGINA = 10;
+const MESES_CORTOS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-// Datos simulados para el Gráfico de Barras (Flujo Mensual)
-const dataMensual = [
-  { mes: 'May', postulantes: 35 },
-  { mes: 'Jun', postulantes: 42 },
-  { mes: 'Jul', postulantes: 48 },
-  { mes: 'Ago', postulantes: 53 },
-  { mes: 'Sep', postulantes: 61 },
-  { mes: 'Oct', postulantes: 41 },
-];
+const ICONOS_ESTADO = {
+  pendiente: FaRegClock,
+  revision: FaSearchPlus,
+  entrevista: FaRegCalendarCheck,
+  finalizado: FaCheckCircle,
+};
 
-// Datos simulados para la Tabla
-const candidatosRecientes = [
-  { id: 'CF', nombre: 'Camila Fuentes Rojas', email: 'camila.fuentes@gmail.com', cargo: 'Jefa de Centro de Cultivo', familia: 'Operaciones', fecha: '17 oct 2026', estado: 'Pendiente' },
-  { id: 'MS', nombre: 'Matías Soto Henríquez', email: 'msoto.henriquez@outlook.com', cargo: 'Desarrollador Full Stack', familia: 'Tecnología / TI', fecha: '16 oct 2026', estado: 'En proceso' },
-  { id: 'VM', nombre: 'Valentina Muñoz Carrasco', email: 'vmunoz.c@gmail.com', cargo: 'Técnico en Acuicultura', familia: 'Operaciones', fecha: '15 oct 2026', estado: 'Finalizada' }
-];
+// ================= UTILIDADES =================
+const iniciales = (nombre = '') =>
+  nombre
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || '?';
 
-const Dashboard = () => {
-  // Estados de la interfaz
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [filtroEstado, setFiltroEstado] = useState('Todos'); // Memoria del filtro seleccionado
+const aFecha = (valor) => {
+  const d = valor ? new Date(valor) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+};
 
-  // Lógica de filtrado: Decide qué candidatos mostrar según la pestaña activa
-  const candidatosFiltrados = candidatosRecientes.filter(candidato => {
-    if (filtroEstado === 'Todos') return true;
-    return candidato.estado === filtroEstado;
-  });
+const formatearFecha = (valor) => {
+  const d = aFecha(valor);
+  return d
+    ? d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '—';
+};
 
-  // Contadores dinámicos (calculan cuántos hay de cada estado automáticamente)
-  const countTodos = candidatosRecientes.length;
-  const countPendiente = candidatosRecientes.filter(c => c.estado === 'Pendiente').length;
-  const countEnProceso = candidatosRecientes.filter(c => c.estado === 'En proceso').length;
-  const countFinalizada = candidatosRecientes.filter(c => c.estado === 'Finalizada').length;
+const tiempoRelativo = (valor) => {
+  const d = aFecha(valor);
+  if (!d) return '';
+  const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (dias <= 0) return 'Hoy';
+  if (dias === 1) return 'Ayer';
+  if (dias < 7) return `Hace ${dias} días`;
+  if (dias < 30) {
+    const semanas = Math.floor(dias / 7);
+    return `Hace ${semanas} ${semanas === 1 ? 'semana' : 'semanas'}`;
+  }
+  const meses = Math.floor(dias / 30);
+  return `Hace ${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+};
 
+const telefonoInternacional = (tel = '') => {
+  const digitos = tel.replace(/\D/g, '');
+  if (!digitos) return '';
+  return digitos.startsWith('56') ? digitos : `56${digitos}`;
+};
+
+const nombreUsuario = () => {
+  const u = typeof auth.obtenerUsuario === 'function' ? auth.obtenerUsuario() : null;
+  if (!u) return 'Administrador';
+  if (typeof u === 'string') return u;
+  return u.nombre ?? u.usuario ?? u.username ?? 'Administrador';
+};
+
+const sinAcentos = (t = '') => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+const exportarCsv = (filas) => {
+  const columnas = ['Nombre', 'RUT', 'Correo', 'Teléfono', 'Área', 'Fecha', 'Estado'];
+  const escapar = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lineas = filas.map((p) =>
+    [
+      p.nombre,
+      p.rut,
+      p.correo,
+      p.telefono,
+      AREAS[p.area] ?? p.area,
+      formatearFecha(p.fecha),
+      ESTADOS[p.estado]?.label,
+    ]
+      .map(escapar)
+      .join(';')
+  );
+  // BOM + punto y coma: Excel en español lo abre con columnas y acentos correctos
+  const contenido = '﻿' + [columnas.join(';'), ...lineas].join('\r\n');
+  const url = URL.createObjectURL(new Blob([contenido], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `postulaciones_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+// ================= COMPONENTES PEQUEÑOS =================
+const EstadoBadge = ({ estado }) => {
+  const Icono = ICONOS_ESTADO[estado] ?? FaRegClock;
   return (
-    <div className="dashboard-wrapper">
-      
-      {/* 1. BARRA DE NAVEGACIÓN SUPERIOR (NAVBAR) */}
-      <header className="dashboard-navbar">
-        <div className="navbar-left">
-          <div className="brand-logo">
-            <img src="/logo.png" alt="AquaChile Logo" className="logo-img" />
-            {/* Se eliminó el texto redundante para mantener un diseño minimalista */}
-          </div>
-          
-          <div className="navbar-divider"></div>
-          
-          <div className="breadcrumbs">
-            <span className="crumb-muted">Inicio</span>
-            <span className="crumb-separator">&gt;</span>
-            <span className="crumb-active">Solicitudes</span>
-          </div>
+    <span className={`db-badge db-badge--${estado}`}>
+      <Icono aria-hidden="true" />
+      {ESTADOS[estado]?.label ?? 'Pendiente'}
+    </span>
+  );
+};
+
+const KpiCard = ({ titulo, valor, detalle, Icono, variante, cargando }) => (
+  <div className={`db-kpi db-kpi--${variante}`}>
+    <div className="db-kpi-top">
+      <span className="db-kpi-title">{titulo}</span>
+      <span className="db-kpi-icon" aria-hidden="true">
+        <Icono />
+      </span>
+    </div>
+    <span className="db-kpi-value">{cargando ? '—' : valor}</span>
+    <span className="db-kpi-detail">{cargando ? 'Cargando…' : detalle}</span>
+  </div>
+);
+
+const EstadoVacio = ({ Icono, titulo, texto, children }) => (
+  <div className="db-empty">
+    <span className="db-empty-icon" aria-hidden="true">
+      <Icono />
+    </span>
+    <p className="db-empty-title">{titulo}</p>
+    {texto && <p className="db-empty-text">{texto}</p>}
+    {children}
+  </div>
+);
+
+// ================= DASHBOARD =================
+const Dashboard = () => {
+  const navigate = useNavigate();
+
+  const [postulaciones, setPostulaciones] = useState([]);
+  const [estadoCarga, setEstadoCarga] = useState('cargando'); // cargando | listo | error
+  const [ultimaActualizacion, setUltimaActualizacion] = useState(null);
+
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+  const [filtroArea, setFiltroArea] = useState('todas');
+  const [pagina, setPagina] = useState(1);
+
+  const [seleccionadaId, setSeleccionadaId] = useState(null);
+  const [aviso, setAviso] = useState(null); // { tipo, texto }
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
+  const panelRef = useRef(null);
+  const usuario = nombreUsuario();
+
+  // ---------- Carga de datos ----------
+  const cargar = useCallback(async () => {
+    setEstadoCarga('cargando');
+    try {
+      const datos = await obtenerPostulaciones();
+      setPostulaciones(datos);
+      setEstadoCarga('listo');
+      setUltimaActualizacion(new Date());
+    } catch (err) {
+      console.error('Error al cargar postulaciones:', err);
+      setEstadoCarga('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  // ---------- Avisos temporales ----------
+  const mostrarAviso = (tipo, texto) => {
+    setAviso({ tipo, texto });
+    setTimeout(() => setAviso(null), 3500);
+  };
+
+  // ---------- Cerrar con Escape ----------
+  useEffect(() => {
+    const alPresionar = (e) => {
+      if (e.key === 'Escape') {
+        setSeleccionadaId(null);
+        setMenuAbierto(false);
+      }
+    };
+    window.addEventListener('keydown', alPresionar);
+    return () => window.removeEventListener('keydown', alPresionar);
+  }, []);
+
+  useEffect(() => {
+    if (seleccionadaId) panelRef.current?.focus();
+  }, [seleccionadaId]);
+
+  // ---------- Métricas ----------
+  const conteos = useMemo(() => {
+    const base = { pendiente: 0, revision: 0, entrevista: 0, finalizado: 0 };
+    postulaciones.forEach((p) => {
+      base[p.estado] = (base[p.estado] ?? 0) + 1;
+    });
+    return base;
+  }, [postulaciones]);
+
+  const total = postulaciones.length;
+
+  const nuevasSemana = useMemo(() => {
+    const hace7 = Date.now() - 7 * 86400000;
+    return postulaciones.filter((p) => (aFecha(p.fecha)?.getTime() ?? 0) >= hace7).length;
+  }, [postulaciones]);
+
+  const porArea = useMemo(
+    () =>
+      Object.entries(AREAS).map(([valor, label]) => ({
+        valor,
+        label,
+        cantidad: postulaciones.filter((p) => p.area === valor).length,
+      })),
+    [postulaciones]
+  );
+
+  const porMes = useMemo(() => {
+    const hoy = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const ref = new Date(hoy.getFullYear(), hoy.getMonth() - (5 - i), 1);
+      const cantidad = postulaciones.filter((p) => {
+        const d = aFecha(p.fecha);
+        return d && d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth();
+      }).length;
+      return { label: MESES_CORTOS[ref.getMonth()], cantidad, actual: i === 5 };
+    });
+  }, [postulaciones]);
+
+  const porcentaje = (n) => (total > 0 ? `${Math.round((n / total) * 100)}% del total` : 'Sin datos aún');
+
+  // ---------- Filtros ----------
+  const filtradas = useMemo(() => {
+    const q = sinAcentos(busqueda.trim());
+    const qRut = busqueda.replace(/[^0-9kK]/g, '').toLowerCase();
+    return postulaciones
+      .filter((p) => filtroEstado === 'todos' || p.estado === filtroEstado)
+      .filter((p) => filtroArea === 'todas' || p.area === filtroArea)
+      .filter((p) => {
+        if (!q) return true;
+        const rutLimpio = p.rut.replace(/[^0-9kK]/g, '').toLowerCase();
+        return (
+          sinAcentos(p.nombre).includes(q) ||
+          sinAcentos(p.correo).includes(q) ||
+          (qRut.length >= 3 && rutLimpio.includes(qRut))
+        );
+      })
+      .sort((a, b) => (aFecha(b.fecha)?.getTime() ?? 0) - (aFecha(a.fecha)?.getTime() ?? 0));
+  }, [postulaciones, busqueda, filtroEstado, filtroArea]);
+
+  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
+  const visibles = filtradas.slice((paginaActual - 1) * POR_PAGINA, paginaActual * POR_PAGINA);
+
+  useEffect(() => setPagina(1), [busqueda, filtroEstado, filtroArea]);
+
+  const hayFiltros = busqueda || filtroEstado !== 'todos' || filtroArea !== 'todas';
+  const limpiarFiltros = () => {
+    setBusqueda('');
+    setFiltroEstado('todos');
+    setFiltroArea('todas');
+  };
+
+  const seleccionada = postulaciones.find((p) => p.id === seleccionadaId) ?? null;
+
+  // ---------- Acciones ----------
+  const cambiarEstado = async (id, nuevoEstado) => {
+    const anterior = postulaciones.find((p) => p.id === id)?.estado;
+    if (anterior === nuevoEstado) return;
+    // Actualización optimista: se ve el cambio al instante
+    setPostulaciones((prev) => prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado } : p)));
+    try {
+      await actualizarEstado(id, nuevoEstado);
+      mostrarAviso('ok', `Estado actualizado a "${ESTADOS[nuevoEstado].label}".`);
+    } catch (err) {
+      console.error(err);
+      setPostulaciones((prev) => prev.map((p) => (p.id === id ? { ...p, estado: anterior } : p)));
+      mostrarAviso('error', 'No se pudo guardar el cambio. Inténtalo nuevamente.');
+    }
+  };
+
+  const manejarDescarga = async (p) => {
+    try {
+      await descargarCv(p);
+    } catch (err) {
+      console.error(err);
+      mostrarAviso('error', 'No se pudo descargar el CV.');
+    }
+  };
+
+  const copiar = async (texto, etiqueta) => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      mostrarAviso('ok', `${etiqueta} copiado.`);
+    } catch {
+      mostrarAviso('error', 'No se pudo copiar.');
+    }
+  };
+
+  const cerrarSesion = () => {
+    if (typeof auth.cerrarSesion === 'function') auth.cerrarSesion();
+    navigate('/login', { replace: true });
+  };
+
+  const cargando = estadoCarga === 'cargando' && total === 0;
+  const maxArea = Math.max(...porArea.map((a) => a.cantidad), 1);
+  const maxMes = Math.max(...porMes.map((m) => m.cantidad), 1);
+
+  // ================= RENDER =================
+  return (
+    <div className="db-page">
+      {/* ---------- HEADER ---------- */}
+      <header className="db-header">
+        <div className="db-header-left">
+          <img src="/logo.png" alt="AquaChile" className="db-logo" />
+          <span className="db-header-divider" aria-hidden="true"></span>
+          <span className="db-header-section">Panel de Reclutamiento</span>
         </div>
 
-        <div className="navbar-right">
-          <div className="search-box">
-            <Search className="search-icon" size={16} color="#94a3b8" />
-            <input type="text" placeholder="Buscar en el portal..." />
-          </div>
+        <div className="db-header-right">
+          <a
+            href="/formulario"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="db-header-link"
+          >
+            Ver formulario público <FaExternalLinkAlt aria-hidden="true" />
+          </a>
 
-          <div className="notification-btn">
-            <Bell size={18} color="#cbd5e1" />
-            <span className="badge">3</span>
-          </div>
-          
-{/* PERFIL DE USUARIO INTERACTIVO */}
-          <div className="profile-container" style={{ position: 'relative' }}>
-            <div 
-              className="user-profile" 
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              style={{ cursor: 'pointer' }}
+          <div className="db-user">
+            <button
+              type="button"
+              className="db-user-btn"
+              onClick={() => setMenuAbierto((v) => !v)}
+              aria-expanded={menuAbierto}
+              aria-haspopup="menu"
             >
-              <div className="avatar">DB</div>
-              <div className="user-info">
-                <span className="user-name">Diego B.</span>
-                <span className="user-role">Analista RRHH</span>
-              </div>
-            </div>
-
-            {/* MENÚ DESPLEGABLE (Aparece solo si isProfileOpen es true) */}
-            {isProfileOpen && (
-              <div className="profile-dropdown">
-                <div className="dropdown-header">
-                  {/* Puse tu nombre completo para que se vea súper realista */}
-                  <div className="dropdown-name">Diego Gonzalo Barría</div>
-                  <div className="dropdown-email">d.barria@aquachile.com</div>
+              <span className="db-avatar db-avatar--light">{iniciales(usuario)}</span>
+              <span className="db-user-name">{usuario}</span>
+            </button>
+            {menuAbierto && (
+              <>
+                <div className="db-menu-backdrop" onClick={() => setMenuAbierto(false)} />
+                <div className="db-user-menu" role="menu">
+                  <div className="db-user-menu-head">
+                    <strong>{usuario}</strong>
+                    <span>Reclutamiento AquaChile</span>
+                  </div>
+                  <button type="button" role="menuitem" onClick={cerrarSesion}>
+                    <FaSignOutAlt aria-hidden="true" /> Cerrar sesión
+                  </button>
                 </div>
-                <div className="dropdown-divider"></div>
-                <button className="dropdown-item">
-                  <User size={16} />
-                  <span>Mi Perfil</span>
-                </button>
-                <button className="dropdown-item">
-                  <Settings size={16} />
-                  <span>Configuración</span>
-                </button>
-                <div className="dropdown-divider"></div>
-                <button className="dropdown-item logout">
-                  <LogOut size={16} />
-                  <span>Cerrar Sesión</span>
-                </button>
-              </div>
+              </>
             )}
           </div>
         </div>
       </header>
-      
 
-      {/* 2. CONTENIDO PRINCIPAL */}
-      <main className="dashboard-content">
-        <div className="dashboard-header-title">
-          <h1>Panel de Reclutamiento</h1>
-          <p>Seguimiento de postulaciones y procesos de selección de AquaChile.</p>
-        </div>
-        {/* 2.1 TARJETAS DE MÉTRICAS (KPIs) */}
-        <div className="kpi-grid">
-          
-          <div className="kpi-card">
-            <div className="kpi-header">
-              <span className="kpi-title">Total Postulantes</span>
-              <span className="kpi-icon"><Users size={20} color="#e2e8f0" /></span>
+      <main className="db-main">
+        {/* ---------- TÍTULO ---------- */}
+        <section className="db-titlebar">
+          <div>
+            <h1>Postulaciones</h1>
+            <p>
+              Revisa, filtra y gestiona a los candidatos que postulan a AquaChile.
+              {ultimaActualizacion && (
+                <span className="db-updated">
+                  {' '}Actualizado a las{' '}
+                  {ultimaActualizacion.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}.
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="db-titlebar-actions">
+            <button
+              type="button"
+              className="db-btn db-btn--ghost"
+              onClick={cargar}
+              disabled={estadoCarga === 'cargando'}
+            >
+              <FaSyncAlt className={estadoCarga === 'cargando' ? 'db-spin' : ''} aria-hidden="true" />
+              Actualizar
+            </button>
+            <button
+              type="button"
+              className="db-btn db-btn--outline"
+              onClick={() => exportarCsv(filtradas)}
+              disabled={filtradas.length === 0}
+              title="Descarga la lista filtrada para abrirla en Excel"
+            >
+              <FaFileExcel aria-hidden="true" /> Exportar a Excel
+            </button>
+          </div>
+        </section>
+
+        {estadoCarga === 'error' && (
+          <div className="db-alert" role="alert">
+            <FaExclamationTriangle aria-hidden="true" />
+            <span>No pudimos conectar con el servidor. Revisa que el backend esté encendido.</span>
+            <button type="button" onClick={cargar}>Reintentar</button>
+          </div>
+        )}
+
+        {/* ---------- KPIs ---------- */}
+        <section className="db-kpis" aria-label="Resumen">
+          <KpiCard
+            titulo="Total postulantes"
+            valor={total}
+            detalle={total > 0 ? `${nuevasSemana} nuevas esta semana` : 'Sin postulaciones aún'}
+            Icono={FaUsers}
+            variante="total"
+            cargando={cargando}
+          />
+          {ORDEN_ESTADOS.map((estado) => (
+            <KpiCard
+              key={estado}
+              titulo={ESTADOS[estado].label}
+              valor={conteos[estado]}
+              detalle={total > 0 ? porcentaje(conteos[estado]) : ESTADOS[estado].descripcion}
+              Icono={ICONOS_ESTADO[estado]}
+              variante={estado}
+              cargando={cargando}
+            />
+          ))}
+        </section>
+
+        {/* ---------- TABLA ---------- */}
+        <section className="db-card db-table-card" aria-labelledby="tabla-titulo">
+          <div className="db-card-head db-table-head">
+            <div>
+              <h2 id="tabla-titulo">Solicitudes</h2>
+              <p>
+                {total > 0
+                  ? `${filtradas.length} de ${total} ${total === 1 ? 'postulación' : 'postulaciones'}`
+                  : 'Las postulaciones del formulario aparecerán aquí'}
+              </p>
             </div>
-            <div className="kpi-value">248</div>
-            <div className="kpi-footer text-emerald">
-              +12.4% <span className="kpi-muted">Últimos 6 meses</span>
+
+            <div className="db-filters">
+              <label className="db-search">
+                <FaSearch aria-hidden="true" />
+                <span className="db-visually-hidden">Buscar</span>
+                <input
+                  type="search"
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  placeholder="Buscar por nombre, RUT o correo"
+                />
+              </label>
+              <label className="db-select">
+                <span className="db-visually-hidden">Filtrar por área</span>
+                <select value={filtroArea} onChange={(e) => setFiltroArea(e.target.value)}>
+                  <option value="todas">Todas las áreas</option>
+                  {Object.entries(AREAS).map(([valor, label]) => (
+                    <option key={valor} value={valor}>{label}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
 
-          <div className="kpi-card">
-            <div className="kpi-header">
-              <span className="kpi-title">Pendientes</span>
-              <span className="kpi-icon alert-icon"><Clock size={20} /></span>
-            </div>
-            <div className="kpi-value">64</div>
-            <div className="kpi-footer">
-              26% del total <span className="kpi-muted">CVs esperando revisión</span>
-            </div>
+          <div className="db-tabs" role="tablist" aria-label="Filtrar por estado">
+            {['todos', ...ORDEN_ESTADOS].map((estado) => (
+              <button
+                key={estado}
+                type="button"
+                role="tab"
+                aria-selected={filtroEstado === estado}
+                className={`db-tab${filtroEstado === estado ? ' is-active' : ''}`}
+                onClick={() => setFiltroEstado(estado)}
+              >
+                {estado === 'todos' ? 'Todos' : ESTADOS[estado].label}
+                <span className="db-tab-count">{estado === 'todos' ? total : conteos[estado]}</span>
+              </button>
+            ))}
           </div>
 
-          <div className="kpi-card">
-            <div className="kpi-header">
-              <span className="kpi-title">En Proceso</span>
-              <span className="kpi-icon process-icon"><MessageSquare size={20} /></span>
-            </div>
-            <div className="kpi-value">97</div>
-            <div className="kpi-footer">
-              39% del total <span className="kpi-muted">Entrevistas y evaluaciones</span>
-            </div>
-          </div>
-
-          <div className="kpi-card">
-            <div className="kpi-header">
-              <span className="kpi-title">Finalizados</span>
-              <span className="kpi-icon success-icon"><CheckCircle size={20} /></span>
-            </div>
-            <div className="kpi-value">87</div>
-            <div className="kpi-footer">
-              35% del total <span className="kpi-muted">Procesos cerrados</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2.2 SECCIÓN DE GRÁFICOS */}
-        <div className="charts-grid">
-          
-          <div className="chart-card">
-            <h3 className="chart-title">Postulaciones por Familia de Cargo</h3>
-            <p className="chart-subtitle">Distribución acumulada últimos 6 meses</p>
-            
-            <div className="chart-container" style={{ height: '250px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dataFamilias}
-                    innerRadius={70}
-                    outerRadius={90}
-                    paddingAngle={5}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {dataFamilias.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
-                    itemStyle={{ color: '#e2e8f0' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="chart-legend">
-              {dataFamilias.map((item, i) => (
-                <div key={i} className="legend-item">
-                  <span className="legend-dot" style={{ backgroundColor: item.color }}></span>
-                  <span className="legend-label">{item.name}</span>
-                  <span className="legend-value">{item.value}</span>
+          {cargando ? (
+            <div className="db-skeleton-list" aria-label="Cargando postulaciones">
+              {[0, 1, 2, 3].map((i) => (
+                <div className="db-skeleton-row" key={i}>
+                  <span className="db-skeleton db-skeleton--circle" />
+                  <span className="db-skeleton db-skeleton--wide" />
+                  <span className="db-skeleton" />
+                  <span className="db-skeleton" />
                 </div>
               ))}
             </div>
-          </div>
+          ) : total === 0 ? (
+            <EstadoVacio
+              Icono={FaInbox}
+              titulo="Aún no hay postulaciones"
+              texto="Cuando alguien envíe el formulario de postulación, aparecerá aquí con su CV listo para revisar."
+            >
+              <a href="/formulario" target="_blank" rel="noopener noreferrer" className="db-btn db-btn--outline">
+                Abrir formulario público <FaExternalLinkAlt aria-hidden="true" />
+              </a>
+            </EstadoVacio>
+          ) : filtradas.length === 0 ? (
+            <EstadoVacio
+              Icono={FaSearch}
+              titulo="Sin resultados"
+              texto="Ninguna postulación coincide con la búsqueda o los filtros elegidos."
+            >
+              {hayFiltros && (
+                <button type="button" className="db-btn db-btn--outline" onClick={limpiarFiltros}>
+                  Limpiar filtros
+                </button>
+              )}
+            </EstadoVacio>
+          ) : (
+            <>
+              <div className="db-table-wrap">
+                <table className="db-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Candidato</th>
+                      <th scope="col">RUT</th>
+                      <th scope="col">Área</th>
+                      <th scope="col">Postuló</th>
+                      <th scope="col">Estado</th>
+                      <th scope="col" className="db-th-actions">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibles.map((p) => (
+                      <tr
+                        key={p.id}
+                        className={p.estado === 'pendiente' ? 'is-new' : undefined}
+                        onClick={() => setSeleccionadaId(p.id)}
+                      >
+                        <td>
+                          <div className="db-candidate">
+                            <span className="db-avatar">{iniciales(p.nombre)}</span>
+                            <div>
+                              <span className="db-candidate-name">{p.nombre}</span>
+                              <span className="db-candidate-mail">{p.correo}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="db-mono">{p.rut || '—'}</td>
+                        <td>
+                          <span className="db-area-chip">{AREAS[p.area] ?? (p.area || '—')}</span>
+                        </td>
+                        <td>
+                          <span className="db-date">{formatearFecha(p.fecha)}</span>
+                          <span className="db-date-rel">{tiempoRelativo(p.fecha)}</span>
+                        </td>
+                        <td>
+                          <EstadoBadge estado={p.estado} />
+                        </td>
+                        <td className="db-td-actions" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="db-icon-btn"
+                            onClick={() => manejarDescarga(p)}
+                            aria-label={`Descargar CV de ${p.nombre}`}
+                            title="Descargar CV"
+                          >
+                            <FaFileDownload aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="db-btn db-btn--primary db-btn--sm"
+                            onClick={() => setSeleccionadaId(p.id)}
+                          >
+                            <FaEye aria-hidden="true" /> Revisar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          <div className="chart-card">
-            <h3 className="chart-title">Flujo Mensual de Postulaciones</h3>
-            <p className="chart-subtitle">Volumen de postulantes por mes, 2026</p>
-            
-            <div className="chart-container" style={{ height: '300px', marginTop: '1rem' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dataMensual}>
-                  <XAxis dataKey="mes" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }}
-                  />
-                  <Bar dataKey="postulantes" fill="#0284c7" radius={[4, 4, 0, 0]} barSize={32} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+              {totalPaginas > 1 && (
+                <nav className="db-pagination" aria-label="Paginación">
+                  <span>
+                    Página {paginaActual} de {totalPaginas}
+                  </span>
+                  <div>
+                    <button
+                      type="button"
+                      className="db-icon-btn"
+                      onClick={() => setPagina(paginaActual - 1)}
+                      disabled={paginaActual === 1}
+                      aria-label="Página anterior"
+                    >
+                      <FaChevronLeft aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
+                      className="db-icon-btn"
+                      onClick={() => setPagina(paginaActual + 1)}
+                      disabled={paginaActual === totalPaginas}
+                      aria-label="Página siguiente"
+                    >
+                      <FaChevronRight aria-hidden="true" />
+                    </button>
+                  </div>
+                </nav>
+              )}
+            </>
+          )}
+        </section>
 
-        </div>
-
-        {/* 2.3 TABLA DE SOLICITUDES RECIENTES */}
-        <div className="table-card">
-          <div className="table-header">
-            <div>
-              <h3>Solicitudes Recientes</h3>
-              <p className="chart-subtitle">Gestiona y revisa las postulaciones entrantes</p>
-            </div>
-            <div className="table-filters">
-              <div className="status-tabs">
-                <span 
-                  className={`tab ${filtroEstado === 'Todos' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Todos')}
-                >
-                  Todos <span className="tab-count">{countTodos}</span>
-                </span>
-                <span 
-                  className={`tab ${filtroEstado === 'Pendiente' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Pendiente')}
-                >
-                  Pendiente <span className="tab-count">{countPendiente}</span>
-                </span>
-                <span 
-                  className={`tab ${filtroEstado === 'En proceso' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('En proceso')}
-                >
-                  En proceso <span className="tab-count">{countEnProceso}</span>
-                </span>
-                <span 
-                  className={`tab ${filtroEstado === 'Finalizada' ? 'active' : ''}`} 
-                  onClick={() => setFiltroEstado('Finalizada')}
-                >
-                  Finalizada <span className="tab-count">{countFinalizada}</span>
-                </span>
+        {/* ---------- GRÁFICOS ---------- */}
+        <section className="db-charts">
+          <div className="db-card">
+            <div className="db-card-head">
+              <div>
+                <h2>Postulaciones por área</h2>
+                <p>Distribución total según el área de interés</p>
               </div>
             </div>
-          </div>
-
-
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>CANDIDATO</th>
-                  <th>CARGO POSTULADO</th>
-                  <th>FAMILIA DE CARGO</th>
-                  <th>FECHA DE SOLICITUD</th>
-                  <th>ESTADO</th>
-                  <th>ACCIONES</th>
-                </tr>
-              </thead>
-              <tbody>
-                {candidatosFiltrados.map((cand, index) => (
-                  <tr key={index}>
-                    <td>
-                      <div className="candidate-cell">
-                        <div className="candidate-avatar">{cand.id}</div>
-                        <div>
-                          <div className="candidate-name">{cand.nombre}</div>
-                          <div className="candidate-email">{cand.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="table-text">{cand.cargo}</td>
-                    <td><span className="badge-family">{cand.familia}</span></td>
-                    <td className="table-text">{cand.fecha}</td>
-                    <td>
-                      <span className={`badge-status ${cand.estado.replace(' ', '-').toLowerCase()}`}>
-                        <span className="status-dot"></span> {cand.estado}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        <button className="btn-secondary">
-                          <FileText size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom' }} /> 
-                          Descargar CV
-                        </button>
-                        <button className="btn-primary">
-                          <Eye size={14} style={{ display: 'inline', marginRight: '5px', verticalAlign: 'text-bottom' }} /> 
-                          Revisar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+            {total === 0 ? (
+              <EstadoVacio
+                Icono={FaChartBar}
+                titulo="Sin datos todavía"
+                texto="El gráfico se completa a medida que lleguen postulaciones."
+              />
+            ) : (
+              <ul className="db-hbars">
+                {porArea.map((a) => (
+                  <li key={a.valor}>
+                    <div className="db-hbar-label">
+                      <span>{a.label}</span>
+                      <strong>{a.cantidad}</strong>
+                    </div>
+                    <div className="db-hbar-track">
+                      <div
+                        className="db-hbar-fill"
+                        style={{ width: `${(a.cantidad / maxArea) * 100}%` }}
+                      />
+                    </div>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+            )}
           </div>
-        </div>
+
+          <div className="db-card">
+            <div className="db-card-head">
+              <div>
+                <h2>Postulaciones por mes</h2>
+                <p>Últimos 6 meses</p>
+              </div>
+            </div>
+            {total === 0 ? (
+              <EstadoVacio
+                Icono={FaChartBar}
+                titulo="Sin datos todavía"
+                texto="Aquí verás cuántas postulaciones llegan cada mes."
+              />
+            ) : (
+              <div className="db-vbars" role="img" aria-label={porMes.map((m) => `${m.label}: ${m.cantidad}`).join(', ')}>
+                {porMes.map((m) => (
+                  <div className={`db-vbar${m.actual ? ' is-current' : ''}`} key={m.label}>
+                    <span className="db-vbar-value">{m.cantidad}</span>
+                    <div className="db-vbar-track">
+                      <div
+                        className="db-vbar-fill"
+                        style={{ height: `${Math.max((m.cantidad / maxMes) * 100, m.cantidad ? 4 : 0)}%` }}
+                      />
+                    </div>
+                    <span className="db-vbar-label">{m.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
+      {/* ---------- PANEL DE DETALLE ---------- */}
+      {seleccionada && (
+        <>
+          <div className="db-drawer-backdrop" onClick={() => setSeleccionadaId(null)} />
+          <aside
+            className="db-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detalle-nombre"
+            tabIndex={-1}
+            ref={panelRef}
+          >
+            <div className="db-drawer-head">
+              <span className="db-avatar db-avatar--lg">{iniciales(seleccionada.nombre)}</span>
+              <div className="db-drawer-title">
+                <h2 id="detalle-nombre">{seleccionada.nombre}</h2>
+                <span>
+                  {AREAS[seleccionada.area] ?? seleccionada.area} · Postuló el {formatearFecha(seleccionada.fecha)}
+                </span>
+              </div>
+              <button
+                type="button"
+                className="db-icon-btn"
+                onClick={() => setSeleccionadaId(null)}
+                aria-label="Cerrar detalle"
+              >
+                <FaTimes aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="db-drawer-body">
+              <section className="db-drawer-section">
+                <h3>Estado del proceso</h3>
+                <div className="db-steps" role="radiogroup" aria-label="Estado del proceso">
+                  {ORDEN_ESTADOS.map((estado, i) => {
+                    const actualIdx = ORDEN_ESTADOS.indexOf(seleccionada.estado);
+                    const clase = i < actualIdx ? 'is-done' : i === actualIdx ? 'is-active' : '';
+                    return (
+                      <button
+                        key={estado}
+                        type="button"
+                        role="radio"
+                        aria-checked={seleccionada.estado === estado}
+                        className={`db-step ${clase}`}
+                        onClick={() => cambiarEstado(seleccionada.id, estado)}
+                      >
+                        <span className="db-step-dot">{i < actualIdx ? '✓' : i + 1}</span>
+                        <span className="db-step-label">{ESTADOS[estado].label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="db-drawer-section">
+                <h3>Datos de contacto</h3>
+                <dl className="db-info">
+                  <div>
+                    <dt><FaEnvelope aria-hidden="true" /> Correo</dt>
+                    <dd>
+                      <a href={`mailto:${seleccionada.correo}`}>{seleccionada.correo || '—'}</a>
+                      {seleccionada.correo && (
+                        <button
+                          type="button"
+                          className="db-copy"
+                          onClick={() => copiar(seleccionada.correo, 'Correo')}
+                          aria-label="Copiar correo"
+                        >
+                          <FaRegCopy aria-hidden="true" />
+                        </button>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt><FaPhoneAlt aria-hidden="true" /> Teléfono</dt>
+                    <dd>
+                      {seleccionada.telefono ? (
+                        <>
+                          <a href={`tel:+${telefonoInternacional(seleccionada.telefono)}`}>
+                            +{telefonoInternacional(seleccionada.telefono)}
+                          </a>
+                          <a
+                            className="db-whatsapp"
+                            href={`https://wa.me/${telefonoInternacional(seleccionada.telefono)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <FaWhatsapp aria-hidden="true" /> WhatsApp
+                          </a>
+                        </>
+                      ) : (
+                        '—'
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt><FaIdCard aria-hidden="true" /> RUT</dt>
+                    <dd>
+                      <span className="db-mono">{seleccionada.rut || '—'}</span>
+                      {seleccionada.rut && (
+                        <button
+                          type="button"
+                          className="db-copy"
+                          onClick={() => copiar(seleccionada.rut, 'RUT')}
+                          aria-label="Copiar RUT"
+                        >
+                          <FaRegCopy aria-hidden="true" />
+                        </button>
+                      )}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt><FaBriefcase aria-hidden="true" /> Área</dt>
+                    <dd>{AREAS[seleccionada.area] ?? (seleccionada.area || '—')}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="db-drawer-section">
+                <h3>Carta de presentación</h3>
+                {seleccionada.carta ? (
+                  <p className="db-letter">{seleccionada.carta}</p>
+                ) : (
+                  <p className="db-muted">El candidato no adjuntó carta de presentación.</p>
+                )}
+              </section>
+
+              <section className="db-drawer-section">
+                <h3>Currículum</h3>
+                <div className="db-cv">
+                  <FaRegFileAlt className="db-cv-icon" aria-hidden="true" />
+                  <div className="db-cv-info">
+                    <strong>{seleccionada.cvNombre || 'CV del candidato'}</strong>
+                    <span>Documento PDF</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="db-btn db-btn--outline db-btn--sm"
+                    onClick={() => manejarDescarga(seleccionada)}
+                  >
+                    <FaFileDownload aria-hidden="true" /> Descargar
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div className="db-drawer-foot">
+              <a className="db-btn db-btn--primary" href={`mailto:${seleccionada.correo}?subject=${encodeURIComponent('Tu postulación en AquaChile')}`}>
+                <FaEnvelope aria-hidden="true" /> Escribir al candidato
+              </a>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ---------- AVISOS ---------- */}
+      {aviso && (
+        <div className={`db-toast db-toast--${aviso.tipo}`} role="status">
+          {aviso.tipo === 'ok' ? <FaCheckCircle aria-hidden="true" /> : <FaExclamationTriangle aria-hidden="true" />}
+          {aviso.texto}
+        </div>
+      )}
     </div>
   );
 };
