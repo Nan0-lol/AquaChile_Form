@@ -5,98 +5,24 @@ import {
   FaMapMarkerAlt,
   FaCloudUploadAlt,
   FaFilePdf,
+  FaFileWord,
   FaTimes,
   FaCheckCircle,
-  FaFacebookF,
-  FaInstagram,
 } from 'react-icons/fa';
-import { FaXTwitter } from 'react-icons/fa6';
-import { Link } from 'react-router-dom';
+import { API_BASE } from '../config';
+import {
+  formatearRut,
+  formatearTamano,
+  esWord,
+  validarCv,
+  validarCampo,
+} from '../utils/validaciones';
 import './Postulacion.css';
 
 // ================= CONFIGURACIÓN =================
-// Ajusta esta URL a la ruta real de tu backend (server/, puerto 3001).
-const API_URL = 'http://localhost:3001/api/postulaciones';
-const MAX_CV_BYTES = 5 * 1024 * 1024; // 5 MB
-
-// ================= UTILIDADES DE VALIDACIÓN =================
-const limpiarRut = (rut) => rut.replace(/[^0-9kK]/g, '').toUpperCase();
-
-// Valida el dígito verificador con módulo 11
-const rutEsValido = (rut) => {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 8 || limpio.length > 9) return false;
-  const cuerpo = limpio.slice(0, -1);
-  const dv = limpio.slice(-1);
-  let suma = 0;
-  let multiplo = 2;
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * multiplo;
-    multiplo = multiplo === 7 ? 2 : multiplo + 1;
-  }
-  const resto = 11 - (suma % 11);
-  const dvEsperado = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
-  return dv === dvEsperado;
-};
-
-// 12345678K -> 12.345.678-K
-const formatearRut = (rut) => {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 2) return limpio;
-  const cuerpo = limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${cuerpo}-${limpio.slice(-1)}`;
-};
-
-const formatearTamano = (bytes) =>
-  bytes < 1024 * 1024
-    ? `${Math.round(bytes / 1024)} KB`
-    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-
-const validarCv = (archivo) => {
-  if (!archivo) return 'Adjunta tu CV en PDF.';
-  const esPdf =
-    archivo.type === 'application/pdf' || archivo.name.toLowerCase().endsWith('.pdf');
-  if (!esPdf) return 'El archivo debe ser PDF.';
-  if (archivo.size > MAX_CV_BYTES) return 'El archivo supera los 5 MB.';
-  return '';
-};
-
-const validarCampo = (nombre, valor) => {
-  switch (nombre) {
-    case 'nombre':
-      return valor.trim().length < 3 ? 'Ingresa tu nombre completo.' : '';
-    case 'rut':
-      if (!valor.trim()) return 'Ingresa tu RUT.';
-      return rutEsValido(valor) ? '' : 'RUT inválido. Revisa el dígito verificador.';
-    case 'correo':
-      if (!valor.trim()) return 'Ingresa tu correo.';
-      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(valor) ? '' : 'Correo con formato inválido.';
-    case 'telefono': {
-      const digitos = valor.replace(/\D/g, '');
-      if (!digitos) return 'Ingresa tu teléfono.';
-      return /^9\d{8}$/.test(digitos) ? '' : 'Debe tener 9 dígitos y comenzar con 9.';
-    }
-    case 'area':
-      return valor ? '' : 'Selecciona un área.';
-    default:
-      return '';
-  }
-};
+const API_URL = `${API_BASE}/postulaciones`;
 
 // Cifras del Reporte Integrado AquaChile 2024 (actualízalas cuando salga el reporte siguiente)
-// Enlaces oficiales de AquaChile (se abren en pestaña nueva)
-const ENLACES_FOOTER = [
-  { texto: 'Contacto comercial', url: 'https://es.aquachile.com/contacto-comercial/' },
-  { texto: 'Trabaja con nosotros', url: 'https://trabajos.aquachile.com/' },
-  { texto: 'Canal de Denuncias', url: 'https://secure.ethicspoint.com/domain/media/es/gui/90628/index.html' },
-];
-
-const REDES_SOCIALES = [
-  { nombre: 'Facebook', url: 'https://www.facebook.com/TiendaAquaChile', Icono: FaFacebookF },
-  { nombre: 'Instagram', url: 'https://www.instagram.com/aqua_chile/', Icono: FaInstagram },
-  { nombre: 'X', url: 'https://x.com/aqua_chile', Icono: FaXTwitter },
-];
-
 const CIFRAS = [
   { valor: '+5.800', etiqueta: 'colaboradores' },
   { valor: '62', etiqueta: 'países de destino' },
@@ -110,6 +36,7 @@ const VALORES_INICIALES = {
   correo: '',
   telefono: '',
   area: '',
+  cargo: '',
   carta: '',
 };
 
@@ -122,6 +49,8 @@ const Postulacion = () => {
   const [enviando, setEnviando] = useState(false);
   const [estadoEnvio, setEstadoEnvio] = useState(null); // 'ok' | 'error' | null
   const inputCvRef = useRef(null);
+  const trampaRef = useRef(null);
+  const [mensajeServidor, setMensajeServidor] = useState('');
 
   // ---------- Campos de texto ----------
   const handleChange = (e) => {
@@ -210,19 +139,27 @@ const Postulacion = () => {
     }
 
     const datos = new FormData();
-    datos.append('nombre', valores.nombre.trim());
+    // Los nombres deben coincidir con lo que espera server/validaciones.js
+    datos.append('nombreCompleto', valores.nombre.trim());
     datos.append('rut', formatearRut(valores.rut));
     datos.append('correo', valores.correo.trim());
-    datos.append('telefono', `+56${valores.telefono.replace(/\D/g, '')}`);
+    datos.append('celular', `+56${valores.telefono.replace(/\D/g, '')}`);
     datos.append('area', valores.area);
+    datos.append('nombreCargo', valores.cargo.trim());
     datos.append('carta', valores.carta.trim());
-    datos.append('cv', cv);
     datos.append('consentimiento', 'true');
+    datos.append('sitioWeb', trampaRef.current?.value || ''); // campo trampa anti-bots
+    datos.append('cv', cv); // el archivo va al final
 
     try {
       setEnviando(true);
+      setMensajeServidor('');
       const res = await fetch(API_URL, { method: 'POST', body: datos });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        const respuesta = await res.json().catch(() => ({}));
+        setMensajeServidor(respuesta.mensaje || '');
+        throw new Error(`HTTP ${res.status}`);
+      }
       setEstadoEnvio('ok');
       setValores(VALORES_INICIALES);
       setConsentimiento(false);
@@ -307,7 +244,7 @@ const Postulacion = () => {
           <>
           <h2>Postula a nuestro equipo</h2>
           <p className="subtitle">
-            Completa tus datos y adjunta tu Currículum Vitae actualizado en formato PDF (máx. 5 MB).
+            Completa tus datos y adjunta tu Currículum Vitae actualizado en PDF o DOCX (máx. 5 MB).
             <span className="subtitle-required">
               Los campos marcados con<Asterisco /> son obligatorios.
             </span>
@@ -368,30 +305,52 @@ const Postulacion = () => {
               </div>
             </div>
 
-            <div className="input-group">
-              <label htmlFor="area">Área de interés<Asterisco /></label>
-              <select required {...propsCampo('area')}>
-                <option value="">Selecciona un área de postulación...</option>
-                <option value="planta">Plantas de Proceso</option>
-                <option value="piscicultura">Pisciculturas</option>
-                <option value="administracion">Administración y Finanzas</option>
-                <option value="comercial">Área Comercial</option>
-              </select>
-              <MensajeError campo="area" />
+            <div className="form-row">
+              <div className="input-group">
+                <label htmlFor="area">Área de interés<Asterisco /></label>
+                <select required {...propsCampo('area')}>
+                  <option value="">Selecciona un área...</option>
+                  <option value="planta">Plantas de Proceso</option>
+                  <option value="piscicultura">Pisciculturas</option>
+                  <option value="administracion">Administración y Finanzas</option>
+                  <option value="comercial">Área Comercial</option>
+                </select>
+                <MensajeError campo="area" />
+              </div>
+              <div className="input-group">
+                <label htmlFor="cargo">Cargo al que postulas<Asterisco /></label>
+                <input type="text" maxLength={100} required {...propsCampo('cargo')} />
+                <MensajeError campo="cargo" />
+              </div>
             </div>
 
             <div className="input-group">
               <label htmlFor="carta">Carta de presentación</label>
               <textarea
                 rows="4"
+                maxLength={3000}
                 {...propsCampo('carta')}
               ></textarea>
+              <MensajeError campo="carta" />
+            </div>
+
+            {/* Campo trampa: invisible para personas, los bots suelen llenarlo */}
+            <div className="campo-trampa" aria-hidden="true">
+              <label htmlFor="sitioWeb">No llenes este campo</label>
+              <input
+                ref={trampaRef}
+                type="text"
+                id="sitioWeb"
+                name="sitioWeb"
+                tabIndex={-1}
+                autoComplete="off"
+              />
             </div>
 
             {/* ---------- CV: input real oculto + zona de arrastrar y soltar ---------- */}
             <div className="input-group">
               <span className="field-label" id="cv-label">
-                Adjuntar CV (PDF)<Asterisco />
+                Adjuntar CV (PDF o DOCX)<Asterisco />
               </span>
 
               <input
@@ -399,7 +358,7 @@ const Postulacion = () => {
                 id="cv"
                 name="cv"
                 type="file"
-                accept=".pdf,application/pdf"
+                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 className="visually-hidden cv-input"
                 onChange={handleCvChange}
                 aria-labelledby="cv-label"
@@ -422,13 +381,17 @@ const Postulacion = () => {
                     <p className="dropzone-text">
                       Arrastra tu CV aquí o <span className="dropzone-link">haz clic para seleccionarlo</span>
                     </p>
-                    <p className="dropzone-hint" id="cv-hint">PDF, máx. 5 MB</p>
+                    <p className="dropzone-hint" id="cv-hint">PDF o DOCX, máx. 5 MB</p>
                   </div>
                 </label>
               ) : (
                 <div className="file-loaded">
                   <div className="file-loaded-info">
-                    <FaFilePdf className="file-loaded-icon" aria-hidden="true" />
+                    {esWord(cv.name) ? (
+                      <FaFileWord className="file-loaded-icon file-loaded-icon--word" aria-hidden="true" />
+                    ) : (
+                      <FaFilePdf className="file-loaded-icon" aria-hidden="true" />
+                    )}
                     <div>
                       <span className="file-loaded-name">{cv.name}</span>
                       <span className="file-loaded-size">{formatearTamano(cv.size)}</span>
@@ -485,7 +448,8 @@ const Postulacion = () => {
 
             {estadoEnvio === 'error' && (
               <p className="form-status form-status--error" role="alert">
-                No pudimos enviar tu postulación. Inténtalo nuevamente en unos minutos.
+                {mensajeServidor ||
+                  'No pudimos enviar tu postulación. Inténtalo nuevamente en unos minutos.'}
               </p>
             )}
           </form>
@@ -542,52 +506,6 @@ const Postulacion = () => {
         </div>
       </section>
 
-      {/* 4. FOOTER CORPORATIVO */}
-      <footer className="aquachile-footer">
-        <div className="footer-content">
-          <div className="footer-logo">
-            <img src="/logo.png" alt="AquaChile" className="footer-logo-img" />
-            <p>
-              CARDONAL S/N, LOTE B,<br />
-              PUERTO MONTT, CHILE<br />
-              <a href="tel:+56652433500" className="footer-phone">+(56) 65 2433 500</a>
-            </p>
-          </div>
-          <div className="footer-links">
-            {ENLACES_FOOTER.map((enlace) => (
-              <a
-                key={enlace.texto}
-                href={enlace.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {enlace.texto}
-              </a>
-            ))}
-          </div>
-        </div>
-        <div className="footer-bottom">
-          <div className="footer-bottom-left">
-            <span>© {new Date().getFullYear()} AquaChile. Todos los derechos reservados.</span>
-            <Link to="/login" className="footer-admin-link">Acceso administradores</Link>
-          </div>
-          <div className="footer-social">
-            <span className="footer-social-label">Encuéntranos</span>
-            {REDES_SOCIALES.map(({ nombre, url, Icono }) => (
-              <a
-                key={nombre}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`AquaChile en ${nombre} (se abre en una pestaña nueva)`}
-                className="social-link"
-              >
-                <Icono aria-hidden="true" />
-              </a>
-            ))}
-          </div>
-        </div>
-      </footer>
 
     </div>
   );

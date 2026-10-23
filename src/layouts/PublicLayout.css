@@ -1,0 +1,17 @@
+/* Páginas públicas: el footer siempre queda abajo, aunque la página sea corta */
+.public-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.public-layout-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cada página ocupa todo el alto disponible entre el navbar y el footer */
+.public-layout-content > * {
+  flex: 1;
+}

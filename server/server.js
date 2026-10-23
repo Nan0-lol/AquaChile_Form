@@ -126,7 +126,7 @@ app.use(cabecerasSeguridad({ produccion: PRODUCCION }));
 app.use(
   cors({
     origin: ORIGEN_PERMITIDO,
-    methods: ['GET', 'POST', 'PATCH'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Content-Disposition'],
   })
@@ -238,6 +238,22 @@ app.get('/api/postulaciones/:id/cv', auth.requerir, (req, res) => {
     return res.status(404).json({ ok: false, mensaje: 'El archivo del CV ya no existe.' });
   }
   res.download(ruta, fila.cv_nombre_original);
+});
+
+// Borrado permanente: elimina los datos de la base y el archivo del CV.
+// (Permite cumplir cuando un postulante pide que se borren sus datos personales.)
+app.delete('/api/postulaciones/:id', auth.requerir, async (req, res) => {
+  const fila = repo.obtener(req.params.id);
+  if (!fila) {
+    return res.status(404).json({ ok: false, mensaje: 'Postulación no encontrada.' });
+  }
+  repo.eliminar(fila.id);
+  // Si el archivo ya no existía, no es un error: lo importante es que no quede nada
+  await fs.promises
+    .unlink(path.join(CARPETA_CV, path.basename(fila.cv_archivo)))
+    .catch(() => {});
+  console.log(`Postulación ${fila.id} eliminada por ${req.usuario}.`);
+  res.json({ ok: true });
 });
 
 // --- Manejo de errores (multer y otros) ---

@@ -8,7 +8,6 @@ import {
   FaCheckCircle,
   FaFileDownload,
   FaEye,
-  FaSignOutAlt,
   FaSyncAlt,
   FaFileExcel,
   FaTimes,
@@ -26,6 +25,8 @@ import {
   FaChartBar,
   FaSearchPlus,
   FaRegFileAlt,
+  FaFileWord,
+  FaLayerGroup,
 } from 'react-icons/fa';
 import * as auth from '../auth';
 import {
@@ -35,6 +36,7 @@ import {
   obtenerPostulaciones,
   actualizarEstado,
   descargarCv,
+  ErrorApi,
 } from '../services/postulaciones';
 import './Dashboard.css';
 
@@ -90,17 +92,12 @@ const telefonoInternacional = (tel = '') => {
   return digitos.startsWith('56') ? digitos : `56${digitos}`;
 };
 
-const nombreUsuario = () => {
-  const u = typeof auth.obtenerUsuario === 'function' ? auth.obtenerUsuario() : null;
-  if (!u) return 'Administrador';
-  if (typeof u === 'string') return u;
-  return u.nombre ?? u.usuario ?? u.username ?? 'Administrador';
-};
+const esWord = (nombre = '') => nombre.toLowerCase().endsWith('.docx');
 
 const sinAcentos = (t = '') => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 const exportarCsv = (filas) => {
-  const columnas = ['Nombre', 'RUT', 'Correo', 'Teléfono', 'Área', 'Fecha', 'Estado'];
+  const columnas = ['Nombre', 'RUT', 'Correo', 'Teléfono', 'Cargo', 'Área', 'Fecha', 'Estado'];
   const escapar = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const lineas = filas.map((p) =>
     [
@@ -108,6 +105,7 @@ const exportarCsv = (filas) => {
       p.rut,
       p.correo,
       p.telefono,
+      p.cargo,
       AREAS[p.area] ?? p.area,
       formatearFecha(p.fecha),
       ESTADOS[p.estado]?.label,
@@ -136,8 +134,15 @@ const EstadoBadge = ({ estado }) => {
   );
 };
 
-const KpiCard = ({ titulo, valor, detalle, Icono, variante, cargando }) => (
-  <div className={`db-kpi db-kpi--${variante}`}>
+// Tarjeta de resumen. Es un botón: al presionarla filtra la tabla por ese estado.
+const KpiCard = ({ titulo, valor, detalle, Icono, variante, cargando, activa, onClick }) => (
+  <button
+    type="button"
+    className={`db-kpi db-kpi--${variante}${activa ? ' is-active' : ''}`}
+    onClick={onClick}
+    aria-pressed={activa}
+    title={`Ver ${titulo.toLowerCase()} en la tabla`}
+  >
     <div className="db-kpi-top">
       <span className="db-kpi-title">{titulo}</span>
       <span className="db-kpi-icon" aria-hidden="true">
@@ -146,7 +151,7 @@ const KpiCard = ({ titulo, valor, detalle, Icono, variante, cargando }) => (
     </div>
     <span className="db-kpi-value">{cargando ? '—' : valor}</span>
     <span className="db-kpi-detail">{cargando ? 'Cargando…' : detalle}</span>
-  </div>
+  </button>
 );
 
 const EstadoVacio = ({ Icono, titulo, texto, children }) => (
@@ -175,10 +180,15 @@ const Dashboard = () => {
 
   const [seleccionadaId, setSeleccionadaId] = useState(null);
   const [aviso, setAviso] = useState(null); // { tipo, texto }
-  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const panelRef = useRef(null);
-  const usuario = nombreUsuario();
+  const tablaRef = useRef(null);
+
+  // ---------- Sesión vencida: se limpia y se vuelve al login ----------
+  const sesionExpirada = () => {
+    auth.cerrarSesion();
+    navigate('/login', { replace: true });
+  };
 
   // ---------- Carga de datos ----------
   const cargar = useCallback(async () => {
@@ -189,9 +199,11 @@ const Dashboard = () => {
       setEstadoCarga('listo');
       setUltimaActualizacion(new Date());
     } catch (err) {
+      if (err instanceof ErrorApi && err.estado === 401) return sesionExpirada();
       console.error('Error al cargar postulaciones:', err);
       setEstadoCarga('error');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -207,10 +219,7 @@ const Dashboard = () => {
   // ---------- Cerrar con Escape ----------
   useEffect(() => {
     const alPresionar = (e) => {
-      if (e.key === 'Escape') {
-        setSeleccionadaId(null);
-        setMenuAbierto(false);
-      }
+      if (e.key === 'Escape') setSeleccionadaId(null);
     };
     window.addEventListener('keydown', alPresionar);
     return () => window.removeEventListener('keydown', alPresionar);
@@ -273,6 +282,7 @@ const Dashboard = () => {
         return (
           sinAcentos(p.nombre).includes(q) ||
           sinAcentos(p.correo).includes(q) ||
+          sinAcentos(p.cargo).includes(q) ||
           (qRut.length >= 3 && rutLimpio.includes(qRut))
         );
       })
@@ -292,6 +302,15 @@ const Dashboard = () => {
     setFiltroArea('todas');
   };
 
+  // Al presionar una tarjeta: filtra por ese estado y baja hasta la tabla.
+  // Si la tarjeta ya estaba activa, vuelve a mostrar todas.
+  const irATabla = (estado) => {
+    setFiltroEstado((actual) => (actual === estado && estado !== 'todos' ? 'todos' : estado));
+    setBusqueda('');
+    setFiltroArea('todas');
+    tablaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const seleccionada = postulaciones.find((p) => p.id === seleccionadaId) ?? null;
 
   // ---------- Acciones ----------
@@ -304,6 +323,7 @@ const Dashboard = () => {
       await actualizarEstado(id, nuevoEstado);
       mostrarAviso('ok', `Estado actualizado a "${ESTADOS[nuevoEstado].label}".`);
     } catch (err) {
+      if (err instanceof ErrorApi && err.estado === 401) return sesionExpirada();
       console.error(err);
       setPostulaciones((prev) => prev.map((p) => (p.id === id ? { ...p, estado: anterior } : p)));
       mostrarAviso('error', 'No se pudo guardar el cambio. Inténtalo nuevamente.');
@@ -314,6 +334,7 @@ const Dashboard = () => {
     try {
       await descargarCv(p);
     } catch (err) {
+      if (err instanceof ErrorApi && err.estado === 401) return sesionExpirada();
       console.error(err);
       mostrarAviso('error', 'No se pudo descargar el CV.');
     }
@@ -328,65 +349,13 @@ const Dashboard = () => {
     }
   };
 
-  const cerrarSesion = () => {
-    if (typeof auth.cerrarSesion === 'function') auth.cerrarSesion();
-    navigate('/login', { replace: true });
-  };
-
   const cargando = estadoCarga === 'cargando' && total === 0;
   const maxArea = Math.max(...porArea.map((a) => a.cantidad), 1);
   const maxMes = Math.max(...porMes.map((m) => m.cantidad), 1);
 
   // ================= RENDER =================
   return (
-    <div className="db-page">
-      {/* ---------- HEADER ---------- */}
-      <header className="db-header">
-        <div className="db-header-left">
-          <img src="/logo.png" alt="AquaChile" className="db-logo" />
-          <span className="db-header-divider" aria-hidden="true"></span>
-          <span className="db-header-section">Panel de Reclutamiento</span>
-        </div>
-
-        <div className="db-header-right">
-          <a
-            href="/formulario"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="db-header-link"
-          >
-            Ver formulario público <FaExternalLinkAlt aria-hidden="true" />
-          </a>
-
-          <div className="db-user">
-            <button
-              type="button"
-              className="db-user-btn"
-              onClick={() => setMenuAbierto((v) => !v)}
-              aria-expanded={menuAbierto}
-              aria-haspopup="menu"
-            >
-              <span className="db-avatar db-avatar--light">{iniciales(usuario)}</span>
-              <span className="db-user-name">{usuario}</span>
-            </button>
-            {menuAbierto && (
-              <>
-                <div className="db-menu-backdrop" onClick={() => setMenuAbierto(false)} />
-                <div className="db-user-menu" role="menu">
-                  <div className="db-user-menu-head">
-                    <strong>{usuario}</strong>
-                    <span>Reclutamiento AquaChile</span>
-                  </div>
-                  <button type="button" role="menuitem" onClick={cerrarSesion}>
-                    <FaSignOutAlt aria-hidden="true" /> Cerrar sesión
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </header>
-
+    <>
       <main className="db-main">
         {/* ---------- TÍTULO ---------- */}
         <section className="db-titlebar">
@@ -441,6 +410,8 @@ const Dashboard = () => {
             Icono={FaUsers}
             variante="total"
             cargando={cargando}
+            activa={filtroEstado === 'todos'}
+            onClick={() => irATabla('todos')}
           />
           {ORDEN_ESTADOS.map((estado) => (
             <KpiCard
@@ -451,12 +422,14 @@ const Dashboard = () => {
               Icono={ICONOS_ESTADO[estado]}
               variante={estado}
               cargando={cargando}
+              activa={filtroEstado === estado}
+              onClick={() => irATabla(estado)}
             />
           ))}
         </section>
 
         {/* ---------- TABLA ---------- */}
-        <section className="db-card db-table-card" aria-labelledby="tabla-titulo">
+        <section className="db-card db-table-card" aria-labelledby="tabla-titulo" ref={tablaRef}>
           <div className="db-card-head db-table-head">
             <div>
               <h2 id="tabla-titulo">Solicitudes</h2>
@@ -475,7 +448,7 @@ const Dashboard = () => {
                   type="search"
                   value={busqueda}
                   onChange={(e) => setBusqueda(e.target.value)}
-                  placeholder="Buscar por nombre, RUT o correo"
+                  placeholder="Buscar por nombre, RUT o cargo"
                 />
               </label>
               <label className="db-select">
@@ -547,7 +520,7 @@ const Dashboard = () => {
                     <tr>
                       <th scope="col">Candidato</th>
                       <th scope="col">RUT</th>
-                      <th scope="col">Área</th>
+                      <th scope="col">Cargo y área</th>
                       <th scope="col">Postuló</th>
                       <th scope="col">Estado</th>
                       <th scope="col" className="db-th-actions">Acciones</th>
@@ -571,6 +544,7 @@ const Dashboard = () => {
                         </td>
                         <td className="db-mono">{p.rut || '—'}</td>
                         <td>
+                          <span className="db-cargo">{p.cargo || '—'}</span>
                           <span className="db-area-chip">{AREAS[p.area] ?? (p.area || '—')}</span>
                         </td>
                         <td>
@@ -720,7 +694,7 @@ const Dashboard = () => {
               <div className="db-drawer-title">
                 <h2 id="detalle-nombre">{seleccionada.nombre}</h2>
                 <span>
-                  {AREAS[seleccionada.area] ?? seleccionada.area} · Postuló el {formatearFecha(seleccionada.fecha)}
+                  {seleccionada.cargo ? `${seleccionada.cargo} · ` : ''}Postuló el {formatearFecha(seleccionada.fecha)}
                 </span>
               </div>
               <button
@@ -815,7 +789,11 @@ const Dashboard = () => {
                     </dd>
                   </div>
                   <div>
-                    <dt><FaBriefcase aria-hidden="true" /> Área</dt>
+                    <dt><FaBriefcase aria-hidden="true" /> Cargo</dt>
+                    <dd>{seleccionada.cargo || '—'}</dd>
+                  </div>
+                  <div>
+                    <dt><FaLayerGroup aria-hidden="true" /> Área</dt>
                     <dd>{AREAS[seleccionada.area] ?? (seleccionada.area || '—')}</dd>
                   </div>
                 </dl>
@@ -833,10 +811,14 @@ const Dashboard = () => {
               <section className="db-drawer-section">
                 <h3>Currículum</h3>
                 <div className="db-cv">
-                  <FaRegFileAlt className="db-cv-icon" aria-hidden="true" />
+                  {esWord(seleccionada.cvNombre) ? (
+                    <FaFileWord className="db-cv-icon db-cv-icon--word" aria-hidden="true" />
+                  ) : (
+                    <FaRegFileAlt className="db-cv-icon" aria-hidden="true" />
+                  )}
                   <div className="db-cv-info">
                     <strong>{seleccionada.cvNombre || 'CV del candidato'}</strong>
-                    <span>Documento PDF</span>
+                    <span>{esWord(seleccionada.cvNombre) ? 'Documento Word' : 'Documento PDF'}</span>
                   </div>
                   <button
                     type="button"
@@ -865,7 +847,7 @@ const Dashboard = () => {
           {aviso.texto}
         </div>
       )}
-    </div>
+    </>
   );
 };
 

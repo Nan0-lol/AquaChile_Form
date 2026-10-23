@@ -1,29 +1,32 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import NavBar from './components/NavBar';
+import PublicLayout from './layouts/PublicLayout';
+import AdminLayout from './layouts/AdminLayout';
 import Postulacion from './pages/Postulacion';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import RutaProtegida from './RutaProtegida';
+import './App.css'; // colores y estilos globales
 
 function App() {
   return (
     <BrowserRouter>
-      {/* Navbar público (se oculta solo en el dashboard) */}
-      <NavBar />
       <Routes>
-        {/* Público */}
-        <Route path="/formulario" element={<Postulacion />} />
-        <Route path="/login" element={<LoginPage />} />
+        {/* Páginas públicas: NavBar + página + Footer */}
+        <Route element={<PublicLayout />}>
+          <Route path="/formulario" element={<Postulacion />} />
+          <Route path="/login" element={<LoginPage />} />
+        </Route>
 
-        {/* Solo administradores */}
+        {/* Panel de administración: solo con sesión iniciada */}
         <Route
-          path="/dashboard"
           element={
             <RutaProtegida>
-              <Dashboard />
+              <AdminLayout />
             </RutaProtegida>
           }
-        />
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Route>
 
         {/* La raíz y cualquier URL desconocida llevan al formulario */}
         <Route path="/" element={<Navigate to="/formulario" replace />} />

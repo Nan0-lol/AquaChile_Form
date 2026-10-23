@@ -1,23 +1,63 @@
-const CLAVE_SESION = 'aquachile_sesion';
+import { API_BASE } from './config';
 
-export const haySesion = () => sessionStorage.getItem(CLAVE_SESION) === '1';
+// La sesión dura mientras la pestaña esté abierta (sessionStorage).
+// El servidor es quien valida usuario y contraseña: aquí solo se guarda el token.
+const CLAVE_TOKEN = 'aquachile_token';
+const CLAVE_USUARIO = 'aquachile_usuario';
 
-export const cerrarSesion = () => sessionStorage.removeItem(CLAVE_SESION);
+const leer = (clave) => {
+  try {
+    return sessionStorage.getItem(clave);
+  } catch {
+    return null;
+  }
+};
+
+export const obtenerToken = () => leer(CLAVE_TOKEN);
+
+export const obtenerUsuario = () => leer(CLAVE_USUARIO);
+
+export const haySesion = () => Boolean(obtenerToken());
+
+const borrarSesionLocal = () => {
+  try {
+    sessionStorage.removeItem(CLAVE_TOKEN);
+    sessionStorage.removeItem(CLAVE_USUARIO);
+  } catch {
+    /* sin acceso al almacenamiento: no hay nada que borrar */
+  }
+};
+
+/** Cierra la sesión aquí y avisa al servidor para que invalide el token. */
+export const cerrarSesion = () => {
+  const token = obtenerToken();
+  borrarSesionLocal();
+  if (token) {
+    fetch(`${API_BASE}/logout`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch(() => {});
+  }
+};
 
 /**
- * Valida las credenciales.
- *
- * TODO: reemplazar el cuerpo por una llamada real a tu backend, por ejemplo:
- *   const res = await fetch('/api/login', { method: 'POST', ... });
- *   if (!res.ok) return { ok: false };
- *
- * Mientras tanto, las credenciales de prueba SOLO funcionan con `npm run dev`.
- * En una build de producción (`npm run build`) nadie puede entrar con ellas.
+ * Valida las credenciales contra el backend.
+ * Devuelve { ok: true } o { ok: false, mensaje }.
+ * Si el servidor no responde, lanza un error (el login muestra "No pudimos conectarnos").
  */
 export async function iniciarSesion(usuario, password) {
-  if (import.meta.env.DEV && usuario === 'admin' && password === 'admin123') {
-    sessionStorage.setItem(CLAVE_SESION, '1');
-    return { ok: true };
+  const res = await fetch(`${API_BASE}/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ usuario, password }),
+  });
+
+  const datos = await res.json().catch(() => ({}));
+  if (!res.ok || !datos.token) {
+    return { ok: false, mensaje: datos.mensaje };
   }
-  return { ok: false };
+
+  sessionStorage.setItem(CLAVE_TOKEN, datos.token);
+  sessionStorage.setItem(CLAVE_USUARIO, datos.usuario);
+  return { ok: true };
 }

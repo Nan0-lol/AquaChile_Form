@@ -78,11 +78,11 @@ const LoginPage = () => {
 
     setCargando(true);
     try {
-      const { ok } = await iniciarSesion(usuario, password);
+      const { ok, mensaje } = await iniciarSesion(usuario, password);
       if (ok) {
         navigate('/dashboard', { replace: true });
       } else {
-        setError('Usuario o contraseña incorrectos.');
+        setError(mensaje || 'Usuario o contraseña incorrectos.');
       }
     } catch {
       setError('No pudimos conectarnos. Inténtalo nuevamente en unos minutos.');
@@ -105,7 +105,7 @@ const LoginPage = () => {
           </div>
           <h1>Panel de administración</h1>
           <p className="login-subtitle">
-            Acceso exclusivo para el equipo de Reclutamiento de AquaChile.
+            Acceso exclusivo para el equipo de Reclutamiento.
           </p>
 
           <form onSubmit={handleSubmit} noValidate>

@@ -1,9 +1,13 @@
-import { DatabaseSync } from 'node:sqlite';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// SQLite viene incluido en Node 22.5+. Se carga con require (y no con import)
+// para que funcione igual al correr el servidor y al correr las pruebas con Vitest.
+const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
 // La base se guarda en server/data/postulaciones.db
 // (se puede cambiar la carpeta con la variable de entorno CARPETA_DATOS)
@@ -75,6 +79,7 @@ export function crearRepositorio(ruta) {
     'UPDATE postulaciones SET estado = ?, actualizado_en = ? WHERE id = ?'
   );
   const contarTodas = db.prepare('SELECT COUNT(*) AS total FROM postulaciones');
+  const borrarPorId = db.prepare('DELETE FROM postulaciones WHERE id = ?');
 
   return {
     guardar(p) {
@@ -102,6 +107,10 @@ export function crearRepositorio(ruta) {
     actualizarEstado(id, estado) {
       const resultado = cambiarEstado.run(estado, new Date().toISOString(), id);
       return Number(resultado.changes) > 0;
+    },
+    /** Borra la postulación para siempre. Devuelve true si existía. */
+    eliminar(id) {
+      return Number(borrarPorId.run(id).changes) > 0;
     },
     contar() {
       return Number(contarTodas.get().total);

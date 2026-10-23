@@ -1,42 +1,7 @@
 /* =====================================================================
-   DASHBOARD DE RECLUTAMIENTO – AquaChile
-   Usa las variables de :root (index.css) con valores de respaldo.
-   Todas las clases empiezan con "db-" para no chocar con otras páginas.
+   DASHBOARD DE RECLUTAMIENTO – contenido del panel
+   (las variables db- están en layouts/AdminLayout.css)
    ===================================================================== */
-
-.db-page {
-  --db-base: var(--color-base, #3e5463);
-  --db-accent: var(--color-accent, #197aa8);
-  --db-accent-hover: var(--color-accent-hover, #166d96);
-  --db-accent-soft: var(--color-accent-soft, rgba(25, 122, 168, 0.08));
-  --db-accent-ring: var(--color-accent-ring, rgba(25, 122, 168, 0.15));
-  --db-bg: var(--brand-light, #f0f4f8);
-  --db-text: var(--text-main, #1e293b);
-  --db-muted: var(--text-muted, #475569);
-  --db-border: #e2e8f0;
-  --db-border-strong: var(--border-color, #cbd5e1);
-
-  /* Colores de estado (texto con contraste AA sobre su fondo) */
-  --db-pendiente: #b45309;
-  --db-pendiente-bg: #fef3c7;
-  --db-revision: #1d4ed8;
-  --db-revision-bg: #dbeafe;
-  --db-entrevista: #6d28d9;
-  --db-entrevista-bg: #ede9fe;
-  --db-finalizado: #15803d;
-  --db-finalizado-bg: #dcfce7;
-
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: var(--db-bg);
-  color: var(--db-text);
-  min-height: 100vh;
-}
-
-.db-page *,
-.db-page *::before,
-.db-page *::after {
-  box-sizing: border-box;
-}
 
 .db-visually-hidden {
   position: absolute;
@@ -49,166 +14,6 @@
 
 .db-mono {
   white-space: nowrap;
-}
-
-/* ================= HEADER ================= */
-.db-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  height: 68px;
-  padding: 0 32px;
-  background-color: var(--db-base);
-  box-shadow: 0 2px 10px rgba(15, 30, 45, 0.15);
-}
-
-.db-header-left,
-.db-header-right {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  min-width: 0;
-}
-
-.db-logo {
-  height: 36px;
-  width: auto;
-  display: block;
-}
-
-.db-header-divider {
-  width: 1px;
-  height: 26px;
-  background-color: rgba(255, 255, 255, 0.25);
-}
-
-.db-header-section {
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.db-header-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #e2e8f0;
-  font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 0.2s ease;
-}
-
-.db-header-link svg {
-  font-size: 11px;
-}
-
-.db-header-link:hover,
-.db-header-link:focus-visible {
-  color: var(--color-accent-on-dark, #7dd3fc);
-  outline: none;
-}
-
-/* ---------- Usuario ---------- */
-.db-user {
-  position: relative;
-}
-
-.db-user-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 4px;
-  font-family: inherit;
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.db-user-btn:hover,
-.db-user-btn[aria-expanded='true'] {
-  background-color: rgba(255, 255, 255, 0.16);
-}
-
-.db-user-btn:focus-visible {
-  outline: 2px solid var(--color-accent-on-dark, #7dd3fc);
-  outline-offset: 2px;
-}
-
-.db-user-name {
-  font-size: 14px;
-  font-weight: 600;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.db-menu-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-}
-
-.db-user-menu {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  z-index: 41;
-  min-width: 220px;
-  background: #ffffff;
-  border: 1px solid var(--db-border);
-  border-radius: 10px;
-  box-shadow: 0 16px 40px -10px rgba(15, 30, 45, 0.3);
-  overflow: hidden;
-  animation: dbFade 0.15s ease;
-}
-
-.db-user-menu-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--db-border);
-}
-
-.db-user-menu-head strong {
-  font-size: 14px;
-}
-
-.db-user-menu-head span {
-  font-size: 12px;
-  color: var(--db-muted);
-}
-
-.db-user-menu button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  font-family: inherit;
-  font-size: 14px;
-  color: #be123c;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-}
-
-.db-user-menu button:hover,
-.db-user-menu button:focus-visible {
-  background-color: #fff1f2;
-  outline: none;
 }
 
 /* ================= AVATARES ================= */
@@ -224,14 +29,6 @@
   font-weight: 700;
   color: var(--db-accent);
   background-color: var(--db-accent-soft);
-}
-
-.db-avatar--light {
-  width: 32px;
-  height: 32px;
-  font-size: 12px;
-  color: var(--db-base);
-  background-color: #ffffff;
 }
 
 .db-avatar--lg {
@@ -260,7 +57,7 @@
   margin: 0 0 6px;
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--db-base);
+  color: var(--db-heading);
 }
 
 .db-titlebar p {
@@ -270,7 +67,7 @@
 }
 
 .db-updated {
-  color: #64748b;
+  color: var(--db-subtle);
 }
 
 .db-titlebar-actions {
@@ -310,7 +107,7 @@
 
 .db-btn--primary {
   color: #ffffff;
-  background-color: var(--db-accent);
+  background-color: var(--db-accent-solid);
 }
 
 .db-btn--primary:hover:not(:disabled) {
@@ -319,7 +116,7 @@
 
 .db-btn--outline {
   color: var(--db-accent);
-  background-color: #ffffff;
+  background-color: var(--db-surface);
   border-color: var(--db-border-strong);
 }
 
@@ -335,7 +132,7 @@
 
 .db-btn--ghost:hover:not(:disabled) {
   color: var(--db-text);
-  background-color: #e2e8f0;
+  background-color: var(--db-border);
 }
 
 .db-btn--sm {
@@ -353,7 +150,7 @@
   flex-shrink: 0;
   font-size: 15px;
   color: var(--db-muted);
-  background: #ffffff;
+  background: var(--db-surface);
   border: 1px solid var(--db-border-strong);
   border-radius: 8px;
   cursor: pointer;
@@ -397,9 +194,9 @@
   margin-bottom: 20px;
   padding: 14px 16px;
   font-size: 14px;
-  color: #9f1239;
-  background-color: #fff1f2;
-  border: 1px solid #fecdd3;
+  color: var(--db-danger-text);
+  background-color: var(--db-danger-bg);
+  border: 1px solid var(--db-danger-border);
   border-radius: 10px;
 }
 
@@ -411,9 +208,9 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
-  color: #9f1239;
-  background: #ffffff;
-  border: 1px solid #fecdd3;
+  color: var(--db-danger-text);
+  background: var(--db-surface);
+  border: 1px solid var(--db-danger-border);
   border-radius: 8px;
   padding: 6px 14px;
   cursor: pointer;
@@ -433,11 +230,40 @@
   flex-direction: column;
   gap: 6px;
   padding: 20px;
-  background: #ffffff;
+  background: var(--db-surface);
   border: 1px solid var(--db-border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 30, 45, 0.04);
+  box-shadow: var(--db-shadow);
   overflow: hidden;
+  /* Es un botón: se resetean los estilos del navegador */
+  width: 100%;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Efecto zoom al pasar el cursor: indica que la tarjeta se puede presionar */
+.db-kpi:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--db-shadow-hover);
+  border-color: var(--db-kpi-color);
+}
+
+.db-kpi:active {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.db-kpi:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--db-accent-ring), var(--db-shadow-hover);
+}
+
+/* Tarjeta del filtro activo: borde y fondo del color de su estado */
+.db-kpi.is-active {
+  border-color: var(--db-kpi-color);
+  background: linear-gradient(var(--db-kpi-bg), var(--db-kpi-bg)), var(--db-surface);
 }
 
 /* Franja superior de color según el estado */
@@ -495,10 +321,10 @@
 
 /* ================= TARJETAS ================= */
 .db-card {
-  background: #ffffff;
+  background: var(--db-surface);
   border: 1px solid var(--db-border);
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 30, 45, 0.04);
+  box-shadow: var(--db-shadow);
 }
 
 .db-card-head {
@@ -525,6 +351,7 @@
 /* ================= TABLA ================= */
 .db-table-card {
   margin-bottom: 24px;
+  scroll-margin-top: 88px; /* al saltar desde una tarjeta, no queda tapada por el header */
 }
 
 .db-table-head {
@@ -548,7 +375,7 @@
   position: absolute;
   left: 12px;
   font-size: 13px;
-  color: #64748b;
+  color: var(--db-subtle);
   pointer-events: none;
 }
 
@@ -558,7 +385,7 @@
   font-family: inherit;
   font-size: 14px;
   color: var(--db-text);
-  background-color: #ffffff;
+  background-color: var(--db-surface);
   border: 1px solid var(--db-border-strong);
   border-radius: 8px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -570,7 +397,7 @@
 }
 
 .db-search input::placeholder {
-  color: #64748b;
+  color: var(--db-subtle);
 }
 
 .db-select select {
@@ -578,7 +405,7 @@
   -webkit-appearance: none;
   padding: 0 36px 0 12px;
   cursor: pointer;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23475569' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: var(--db-select-arrow);
   background-repeat: no-repeat;
   background-position: right 12px center;
   background-size: 11px 7px;
@@ -598,8 +425,8 @@
   padding: 0 24px;
   border-bottom: 1px solid var(--db-border);
   overflow-x: auto;
-  overflow-y: hidden;      /* ← agrega esta */
-  scrollbar-width: none;   /* ← y esta */
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
 
 .db-tab {
@@ -643,7 +470,7 @@
   font-weight: 600;
   text-align: center;
   color: var(--db-muted);
-  background-color: #f1f5f9;
+  background-color: var(--db-surface-3);
   border-radius: 999px;
 }
 
@@ -670,8 +497,8 @@
   letter-spacing: 0.4px;
   text-transform: uppercase;
   text-align: left;
-  color: #64748b;
-  background-color: #f8fafc;
+  color: var(--db-subtle);
+  background-color: var(--db-surface-2);
   border-bottom: 1px solid var(--db-border);
   white-space: nowrap;
 }
@@ -688,7 +515,7 @@
 
 .db-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--db-surface-3);
   vertical-align: middle;
 }
 
@@ -698,7 +525,7 @@
 }
 
 .db-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--db-surface-2);
 }
 
 .db-table tbody tr:last-child td {
@@ -729,13 +556,20 @@
   color: var(--db-muted);
 }
 
+.db-cargo {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: var(--db-text);
+}
+
 .db-area-chip {
   display: inline-block;
   padding: 4px 10px;
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--db-base);
-  background-color: #f1f5f9;
+  color: var(--db-heading);
+  background-color: var(--db-surface-3);
   border-radius: 999px;
   white-space: nowrap;
 }
@@ -812,14 +646,14 @@
   align-items: center;
   gap: 16px;
   padding: 14px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--db-surface-3);
 }
 
 .db-skeleton {
   height: 12px;
   width: 120px;
   border-radius: 6px;
-  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 50%, #f1f5f9 100%);
+  background: linear-gradient(90deg, var(--db-surface-3) 0%, var(--db-border) 50%, var(--db-surface-3) 100%);
   background-size: 200% 100%;
   animation: dbShimmer 1.2s ease-in-out infinite;
 }
@@ -907,14 +741,14 @@
 
 .db-hbar-track {
   height: 10px;
-  background-color: #f1f5f9;
+  background-color: var(--db-surface-3);
   border-radius: 999px;
   overflow: hidden;
 }
 
 .db-hbar-fill {
   height: 100%;
-  background-color: var(--db-accent);
+  background-color: var(--db-accent-solid);
   border-radius: 999px;
   transition: width 0.5s ease;
 }
@@ -949,19 +783,19 @@
   max-width: 44px;
   display: flex;
   align-items: flex-end;
-  background-color: #f8fafc;
+  background-color: var(--db-surface-2);
   border-radius: 6px 6px 0 0;
 }
 
 .db-vbar-fill {
   width: 100%;
-  background-color: #93c5dd;
+  background-color: var(--db-bar-soft);
   border-radius: 6px 6px 0 0;
   transition: height 0.5s ease;
 }
 
 .db-vbar.is-current .db-vbar-fill {
-  background-color: var(--db-accent);
+  background-color: var(--db-accent-solid);
 }
 
 .db-vbar-label {
@@ -992,7 +826,7 @@
   width: min(480px, 100%);
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+  background: var(--db-surface);
   box-shadow: -20px 0 50px -20px rgba(15, 30, 45, 0.4);
   animation: dbSlideIn 0.25s ease;
   outline: none;
@@ -1041,7 +875,7 @@
 
 .db-drawer-section {
   padding: 20px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--db-surface-3);
 }
 
 .db-drawer-section:last-child {
@@ -1054,7 +888,7 @@
   font-weight: 700;
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--db-subtle);
 }
 
 /* ---------- Pasos del proceso ---------- */
@@ -1080,7 +914,7 @@
 }
 
 .db-step:hover {
-  background-color: #f8fafc;
+  background-color: var(--db-surface-2);
   border-color: var(--db-border);
 }
 
@@ -1098,9 +932,9 @@
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  color: #64748b;
-  background-color: #f1f5f9;
-  border: 2px solid #e2e8f0;
+  color: var(--db-subtle);
+  background-color: var(--db-surface-3);
+  border: 2px solid var(--db-border);
   transition: all 0.2s ease;
 }
 
@@ -1113,14 +947,14 @@
 
 .db-step.is-done .db-step-dot {
   color: #ffffff;
-  background-color: var(--db-finalizado);
-  border-color: var(--db-finalizado);
+  background-color: var(--db-done-solid);
+  border-color: var(--db-done-solid);
 }
 
 .db-step.is-active .db-step-dot {
   color: #ffffff;
-  background-color: var(--db-accent);
-  border-color: var(--db-accent);
+  background-color: var(--db-accent-solid);
+  border-color: var(--db-accent-solid);
   box-shadow: 0 0 0 4px var(--db-accent-ring);
 }
 
@@ -1154,7 +988,7 @@
 
 .db-info dt svg {
   font-size: 12px;
-  color: #64748b;
+  color: var(--db-subtle);
 }
 
 .db-info dd {
@@ -1186,7 +1020,7 @@
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: #64748b;
+  color: var(--db-subtle);
   background: none;
   border: none;
   border-radius: 6px;
@@ -1207,14 +1041,14 @@
   padding: 3px 10px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #15803d;
-  background-color: #dcfce7;
+  color: var(--db-wa-text);
+  background-color: var(--db-wa-bg);
   border-radius: 999px;
 }
 
 .db-info a.db-whatsapp:hover {
   text-decoration: none;
-  background-color: #bbf7d0;
+  background-color: var(--db-wa-bg-hover);
 }
 
 .db-letter {
@@ -1223,7 +1057,7 @@
   font-size: 14px;
   line-height: 1.65;
   color: var(--db-text);
-  background-color: #f8fafc;
+  background-color: var(--db-surface-2);
   border-left: 3px solid var(--db-accent);
   border-radius: 0 8px 8px 0;
   white-space: pre-line;
@@ -1250,6 +1084,10 @@
   flex-shrink: 0;
 }
 
+.db-cv-icon--word {
+  color: var(--db-word);
+}
+
 .db-cv-info {
   flex: 1;
   min-width: 0;
@@ -1271,7 +1109,7 @@
 .db-drawer-foot {
   padding: 16px 24px;
   border-top: 1px solid var(--db-border);
-  background-color: #f8fafc;
+  background-color: var(--db-surface-2);
 }
 
 .db-drawer-foot .db-btn {
@@ -1298,7 +1136,7 @@
   animation: dbToast 0.25s ease;
 }
 
-.db-toast--ok    { background-color: #1e293b; }
+.db-toast--ok    { background-color: #1e293b; border: 1px solid rgba(255, 255, 255, 0.08); }
 .db-toast--ok svg { color: #4ade80; }
 .db-toast--error { background-color: #9f1239; }
 
@@ -1318,23 +1156,9 @@
   .db-charts {
     grid-template-columns: 1fr;
   }
-  .db-header-link {
-    display: none;
-  }
 }
 
 @media (max-width: 640px) {
-  .db-header {
-    padding: 0 16px;
-  }
-  .db-header-divider,
-  .db-header-section,
-  .db-user-name {
-    display: none;
-  }
-  .db-user-btn {
-    padding: 4px;
-  }
   .db-main {
     padding: 24px 16px 48px;
   }

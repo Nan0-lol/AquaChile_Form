@@ -6,7 +6,7 @@
 
 .login-page {
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  min-height: calc(100vh - 72px); /* alto de pantalla menos el navbar */
+  min-height: 560px; /* el layout la estira entre el navbar y el footer */
   background-size: cover;
   background-position: center right;
   background-repeat: no-repeat;
@@ -262,9 +262,6 @@
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 480px) {
-  .login-page {
-    min-height: calc(100vh - 64px);
-  }
   .login-card {
     padding: 32px 24px 24px;
   }
