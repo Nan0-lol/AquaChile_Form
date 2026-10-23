@@ -20,8 +20,21 @@ import { ErrorServicio, noEncontrado, datosInvalidos, reglaNegocio } from './err
 const SOLICITUD = 'La solicitud';
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 
-// Fecha de hoy en formato YYYY-MM-DD (hora local del servidor)
-const hoy = () => new Date().toLocaleDateString('sv-SE');
+// Fechas en hora local del servidor (el mismo formato que usan los formularios)
+const hoy = () => new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+const ahoraLocal = () => {
+  const d = new Date();
+  return `${d.toLocaleDateString('sv-SE')}T${d.toTimeString().slice(0, 5)}`; // YYYY-MM-DDTHH:MM
+};
+const diaLocal = (iso) => new Date(iso).toLocaleDateString('sv-SE');
+const sumarDias = (dia, dias) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+};
+// Una entrevista se agenda, a más tardar, dentro del año siguiente a la solicitud
+const MAX_DIAS_ENTREVISTA = 365;
+const ETAPAS_CON_ENTREVISTA_HECHA = ['realizada', 'informe_enviado'];
 
 const NOMBRES_CAMPOS = {
   evaluadorId: 'responsable',
@@ -180,6 +193,12 @@ export function cambiarEtapa(repo, usuario, id, etapa) {
   if (necesitaEntrevista && !fila.fecha_entrevista) {
     throw reglaNegocio('Primero registra la fecha y hora de la entrevista.', 'fechaEntrevista');
   }
+  if (ETAPAS_CON_ENTREVISTA_HECHA.includes(etapa) && fila.fecha_entrevista > ahoraLocal()) {
+    throw reglaNegocio(
+      'La entrevista todavía no ocurre: márcala como realizada después de la fecha agendada.',
+      'fechaEntrevista'
+    );
+  }
   if (etapa === 'informe_enviado' && !fila.resultado) {
     throw reglaNegocio('Registra el resultado de la evaluación antes de enviar el informe.', 'resultado');
   }
@@ -201,9 +220,31 @@ export function guardarEvaluacion(repo, usuario, id, body = {}) {
   const fila = obtenerFila(repo, id);
   const { errores, datos } = validarEvaluacion(body);
 
-  const fechaSolicitud = String(fila.fecha_solicitud).slice(0, 10);
-  if (datos.fechaInforme && !errores.fechaInforme && datos.fechaInforme < fechaSolicitud) {
-    errores.fechaInforme = 'El informe no puede ser anterior a la fecha de la solicitud.';
+  // ---- Reglas de fechas (que la línea de tiempo tenga sentido) ----
+  const diaSolicitud = diaLocal(fila.fecha_solicitud);
+  const entrevista = Object.hasOwn(datos, 'fechaEntrevista') ? datos.fechaEntrevista : fila.fecha_entrevista;
+  const informe = Object.hasOwn(datos, 'fechaInforme') ? datos.fechaInforme : fila.fecha_informe;
+
+  if (datos.fechaEntrevista && !errores.fechaEntrevista) {
+    const dia = datos.fechaEntrevista.slice(0, 10);
+    if (dia < diaSolicitud) {
+      errores.fechaEntrevista = 'La entrevista no puede ser anterior a la fecha de la solicitud.';
+    } else if (dia > sumarDias(diaSolicitud, MAX_DIAS_ENTREVISTA)) {
+      errores.fechaEntrevista = 'La entrevista debe quedar dentro del año siguiente a la solicitud.';
+    } else if (ETAPAS_CON_ENTREVISTA_HECHA.includes(fila.etapa) && datos.fechaEntrevista > ahoraLocal()) {
+      errores.fechaEntrevista = 'La entrevista ya figura como realizada: su fecha no puede ser futura.';
+    }
+  }
+  if (datos.fechaInforme && !errores.fechaInforme) {
+    if (datos.fechaInforme < diaSolicitud) {
+      errores.fechaInforme = 'El informe no puede ser anterior a la fecha de la solicitud.';
+    } else if (datos.fechaInforme > hoy()) {
+      errores.fechaInforme = 'La fecha del informe no puede ser futura.';
+    }
+  }
+  if (informe && entrevista && !errores.fechaInforme && !errores.fechaEntrevista && informe < entrevista.slice(0, 10)) {
+    errores[Object.hasOwn(datos, 'fechaInforme') ? 'fechaInforme' : 'fechaEntrevista'] =
+      'El informe no puede ser anterior a la entrevista.';
   }
   // Con el informe ya enviado, el resultado no puede quedar vacío
   if (fila.etapa === 'informe_enviado' && Object.hasOwn(datos, 'resultado') && !datos.resultado) {

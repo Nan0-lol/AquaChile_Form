@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { FaArrowLeft, FaPen, FaTrashAlt, FaPlus, FaEnvelope, FaPhone, FaUser, FaListUl, FaChevronRight } from 'react-icons/fa';
 import { obtenerCandidato, obtenerCatalogos, actualizarCandidato, eliminarCandidato, ErrorApi } from '../services/api';
 import { formatearFecha, iniciales, telefonoLegible, cambios } from '../utils/proceso';
@@ -38,7 +38,9 @@ const DetalleCandidato = () => {
   const [guardando, setGuardando] = useState(false);
   const [confirmarBorrado, setConfirmarBorrado] = useState(false);
   const [borrando, setBorrando] = useState(false);
-  const [aviso, setAviso] = useState(null);
+  const location = useLocation();
+  // Si se llega recién registrado, se muestra el aviso
+  const [aviso, setAviso] = useState(location.state?.aviso ? { texto: location.state.aviso } : null);
   const cerrarAviso = useCallback(() => setAviso(null), []);
 
   const cargar = () => {

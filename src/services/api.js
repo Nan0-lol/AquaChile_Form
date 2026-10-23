@@ -83,6 +83,8 @@ export const obtenerEvaluadores = () => obtenerUsuarios('evaluador');
 // ---------- Candidatos ----------
 export const buscarCandidatos = (q = '') => pedir(`/candidatos${aQuery({ q: q.trim() })}`);
 export const obtenerCandidato = (candidatoId) => pedir(`/candidatos/${id(candidatoId)}`);
+/** datos: { nombre, correo, telefono, origen } */
+export const crearCandidato = (datos) => pedir('/candidatos', { metodo: 'POST', json: datos });
 export const actualizarCandidato = (candidatoId, cambios) =>
   pedir(`/candidatos/${id(candidatoId)}`, { metodo: 'PUT', json: cambios });
 export const eliminarCandidato = (candidatoId) => pedir(`/candidatos/${id(candidatoId)}`, { metodo: 'DELETE' });

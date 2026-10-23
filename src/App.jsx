@@ -8,6 +8,7 @@ import NuevaSolicitud from './pages/NuevaSolicitud';
 import DetalleSolicitud from './pages/DetalleSolicitud';
 import Candidatos from './pages/Candidatos';
 import DetalleCandidato from './pages/DetalleCandidato';
+import NuevoCandidato from './pages/NuevoCandidato';
 import RutaProtegida from './RutaProtegida';
 import { haySesion, rutaInicio } from './auth';
 import './App.css'; // colores y estilos globales
@@ -40,6 +41,7 @@ function App() {
           <Route path="/solicitudes/nueva" element={conPermiso('solicitud:crear', <NuevaSolicitud />)} />
           <Route path="/solicitudes/:id" element={conPermiso('solicitud:ver', <DetalleSolicitud />)} />
           <Route path="/candidatos" element={conPermiso('candidato:ver', <Candidatos />)} />
+          <Route path="/candidatos/nuevo" element={conPermiso('candidato:crear', <NuevoCandidato />)} />
           <Route path="/candidatos/:id" element={conPermiso('candidato:ver', <DetalleCandidato />)} />
         </Route>
 

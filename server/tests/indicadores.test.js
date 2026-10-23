@@ -51,7 +51,8 @@ describe('Indicadores del dashboard', () => {
     expect(i.porEtapa.map((e) => e.cantidad)).toEqual([1, 1, 0, 1]);
     expect(i.porFamilia[0]).toEqual({ clave: 'jefatura', etiqueta: 'Jefatura', cantidad: 2 });
     expect(i.porResultado.find((r) => r.clave === 'recomendado').cantidad).toBe(1);
-    expect(i.enProceso).toBe(2);
+    // Los 3 estados del caso: Pendiente / En proceso / Finalizada
+    expect([i.pendientes, i.enProceso, i.finalizadas]).toEqual([1, 1, 1]);
     expect(i.sinResponsable).toBe(1);
   });
 
@@ -71,5 +72,13 @@ describe('Indicadores del dashboard', () => {
     const { porMes } = calcularIndicadores(repo, { ahora: AHORA });
     expect(porMes.map((m) => m.cantidad)).toEqual([1, 0, 0, 0, 0, 2]);
     expect(porMes.at(-1).actual).toBe(true);
+  });
+
+  test('cuenta los informes enviados en el mes en que se enviaron', () => {
+    agregar({ fecha: '2026-09-25T12:00:00Z', etapa: 'informe_enviado', resultado: 'recomendado', informe: '2026-10-02' });
+    agregar({ fecha: '2026-10-01T12:00:00Z', etapa: 'informe_enviado', resultado: 'recomendado', informe: '2026-10-06' });
+    const { porMes } = calcularIndicadores(repo, { ahora: AHORA });
+    expect(porMes.map((m) => m.informes)).toEqual([0, 0, 0, 0, 0, 2]);
+    expect(porMes.map((m) => m.cantidad)).toEqual([0, 0, 0, 0, 1, 1]);
   });
 });

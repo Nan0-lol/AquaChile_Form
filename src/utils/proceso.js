@@ -21,19 +21,58 @@ export const siguienteEtapa = (etapa) => {
   return i >= 0 && i < ORDEN_ETAPAS.length - 1 ? ORDEN_ETAPAS[i + 1] : null;
 };
 
+/** Fecha y hora local actual en el formato de los formularios: "2026-10-23T17:30" */
+export const ahoraLocal = (d = new Date()) => `${d.toLocaleDateString('sv-SE')}T${d.toTimeString().slice(0, 5)}`;
+
+const sumarDias = (dia, dias) => {
+  const d = new Date(`${dia}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+};
+
 /**
  * ¿Qué falta para poder pasar la solicitud a `etapa`?
  * Devuelve el mensaje, o '' si se puede.
  */
-export const requisitoEtapa = (solicitud, etapa) => {
+export const requisitoEtapa = (solicitud, etapa, ahora = ahoraLocal()) => {
   const evaluacion = solicitud?.evaluacion ?? {};
   if (ORDEN_ETAPAS.indexOf(etapa) >= ORDEN_ETAPAS.indexOf('agendada') && !evaluacion.fechaEntrevista) {
     return 'Primero registra la fecha y hora de la entrevista.';
+  }
+  if ((etapa === 'realizada' || etapa === 'informe_enviado') && evaluacion.fechaEntrevista > ahora) {
+    return 'La entrevista todavía no ocurre: márcala como realizada después de la fecha agendada.';
   }
   if (etapa === 'informe_enviado' && !evaluacion.resultado) {
     return 'Registra el resultado de la evaluación antes de enviar el informe.';
   }
   return '';
+};
+
+/**
+ * Revisa que las fechas de la evaluación tengan sentido (mismas reglas del servidor).
+ * Devuelve { campo: mensaje } solo con los errores.
+ */
+export const validarFechasEvaluacion = (solicitud, evaluacion, ahora = ahoraLocal()) => {
+  const errores = {};
+  const diaSolicitud = diaLocal(solicitud.fechaSolicitud);
+  const hoy = ahora.slice(0, 10);
+  const { fechaEntrevista, fechaInforme } = evaluacion;
+  const entrevistaHecha = solicitud.etapa === 'realizada' || solicitud.etapa === 'informe_enviado';
+
+  if (fechaEntrevista) {
+    const dia = fechaEntrevista.slice(0, 10);
+    if (dia < diaSolicitud) errores.fechaEntrevista = 'La entrevista no puede ser anterior a la fecha de la solicitud.';
+    else if (dia > sumarDias(diaSolicitud, 365)) errores.fechaEntrevista = 'La entrevista debe quedar dentro del año siguiente a la solicitud.';
+    else if (entrevistaHecha && fechaEntrevista > ahora) errores.fechaEntrevista = 'La entrevista ya figura como realizada: su fecha no puede ser futura.';
+  }
+  if (fechaInforme) {
+    if (fechaInforme < diaSolicitud) errores.fechaInforme = 'El informe no puede ser anterior a la fecha de la solicitud.';
+    else if (fechaInforme > hoy) errores.fechaInforme = 'La fecha del informe no puede ser futura.';
+    else if (fechaEntrevista && !errores.fechaEntrevista && fechaInforme < fechaEntrevista.slice(0, 10)) {
+      errores.fechaInforme = 'El informe no puede ser anterior a la entrevista.';
+    }
+  }
+  return errores;
 };
 
 /** "Múñoz" -> "munoz" (para buscar sin importar tildes ni mayúsculas) */

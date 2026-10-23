@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaSearch, FaPlus } from 'react-icons/fa';
+import { FaSearch, FaPlus, FaUserPlus } from 'react-icons/fa';
 import { buscarCandidatos, obtenerCatalogos, ErrorApi } from '../services/api';
 import { normalizar, formatearFecha, hace, iniciales, telefonoLegible } from '../utils/proceso';
 import { puede } from '../auth';
@@ -51,13 +51,18 @@ const Candidatos = () => {
           <h1>Candidatos</h1>
           <p>{candidatos.length} personas registradas. Cada una puede tener varias evaluaciones.</p>
         </div>
-        {puede('solicitud:crear') && (
-          <div className="pr-titlebar-actions">
+        <div className="pr-titlebar-actions">
+          {puede('candidato:crear') && (
+            <Link to="/candidatos/nuevo" className="ns-btn ns-btn--outline">
+              <FaUserPlus aria-hidden="true" /> Registrar candidato
+            </Link>
+          )}
+          {puede('solicitud:crear') && (
             <Link to="/solicitudes/nueva" className="ns-btn ns-btn--primary">
               <FaPlus aria-hidden="true" /> Nueva solicitud
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <section className="ns-card pr-lista" aria-label="Listado de candidatos">

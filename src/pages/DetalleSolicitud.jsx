@@ -34,6 +34,9 @@ import {
   ORDEN_ETAPAS,
   siguienteEtapa,
   requisitoEtapa,
+  validarFechasEvaluacion,
+  ahoraLocal,
+  diaLocal,
   formatearFecha,
   formatearFechaHora,
   hace,
@@ -201,12 +204,10 @@ const DetalleSolicitud = () => {
   const guardarEval = async (e) => {
     e.preventDefault();
     if (!hayCambiosEval || guardandoEval) return;
-    const errores = {};
+    // Mismas reglas de fechas que el servidor: avisa antes de enviar
+    const errores = validarFechasEvaluacion(s, evaluacion);
     if (evaluacion.observaciones.length > MAX_OBSERVACIONES) {
       errores.observaciones = `Puede tener hasta ${MAX_OBSERVACIONES.toLocaleString('es-CL')} caracteres.`;
-    }
-    if (evaluacion.fechaInforme && evaluacion.fechaInforme < String(s.fechaSolicitud).slice(0, 10)) {
-      errores.fechaInforme = 'El informe no puede ser anterior a la fecha de la solicitud.';
     }
     setErroresEval(errores);
     if (Object.keys(errores).length) return;
@@ -416,7 +417,7 @@ const DetalleSolicitud = () => {
               <div className="ns-grid">
                 <div className="ns-field">
                   <label className="ns-label" htmlFor="fechaEntrevista">Fecha y hora de la entrevista</label>
-                  <input type="datetime-local" {...propsEval('fechaEntrevista')} />
+                  <input type="datetime-local" min={`${diaLocal(s.fechaSolicitud)}T00:00`} {...propsEval('fechaEntrevista')} />
                   <MensajeError id="fechaEntrevista-error" texto={erroresEval.fechaEntrevista} />
                 </div>
                 <div className="ns-field">
@@ -431,7 +432,7 @@ const DetalleSolicitud = () => {
                 </div>
                 <div className="ns-field">
                   <label className="ns-label" htmlFor="fechaInforme">Fecha del informe</label>
-                  <input type="date" min={String(s.fechaSolicitud).slice(0, 10)} {...propsEval('fechaInforme')} />
+                  <input type="date" min={diaLocal(s.fechaSolicitud)} max={ahoraLocal().slice(0, 10)} {...propsEval('fechaInforme')} />
                   {!erroresEval.fechaInforme && (
                     <p className="ns-hint">Si la dejas vacía, se pone sola al enviar el informe.</p>
                   )}

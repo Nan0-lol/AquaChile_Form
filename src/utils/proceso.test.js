@@ -3,6 +3,7 @@ import {
   estadoGeneral,
   siguienteEtapa,
   requisitoEtapa,
+  validarFechasEvaluacion,
   filtrarSolicitudes,
   contarPorEtapa,
   formatearFecha,
@@ -52,9 +53,40 @@ describe('Etapas del proceso', () => {
   test('avisa qué falta antes de avanzar (mismas reglas del servidor)', () => {
     expect(requisitoEtapa(solicitud(), 'agendada')).toContain('fecha y hora');
     const conFecha = solicitud({ evaluacion: { fechaEntrevista: '2026-10-28T10:00', resultado: null } });
-    expect(requisitoEtapa(conFecha, 'realizada')).toBe('');
-    expect(requisitoEtapa(conFecha, 'informe_enviado')).toContain('resultado');
+    const despues = '2026-10-29T09:00'; // la entrevista ya ocurrió
+    expect(requisitoEtapa(conFecha, 'realizada', despues)).toBe('');
+    expect(requisitoEtapa(conFecha, 'informe_enviado', despues)).toContain('resultado');
     expect(requisitoEtapa(solicitud(), 'recibida')).toBe('');
+  });
+
+  test('no deja marcar como realizada una entrevista futura', () => {
+    const agendada = solicitud({ etapa: 'agendada', evaluacion: { fechaEntrevista: '2026-10-28T10:00' } });
+    expect(requisitoEtapa(agendada, 'realizada', '2026-10-23T17:00')).toContain('todavía no ocurre');
+    expect(requisitoEtapa(agendada, 'realizada', '2026-10-28T10:30')).toBe('');
+  });
+});
+
+describe('Fechas de la evaluación', () => {
+  const AHORA = '2026-10-23T17:00';
+  const s = solicitud(); // solicitada el 10-10-2026
+
+  test('fechas que tienen sentido no dan error', () => {
+    expect(validarFechasEvaluacion(s, { fechaEntrevista: '2026-10-20T10:00', fechaInforme: '2026-10-22' }, AHORA)).toEqual({});
+  });
+
+  test('la entrevista va entre la solicitud y un año después', () => {
+    expect(validarFechasEvaluacion(s, { fechaEntrevista: '2026-10-01T10:00' }, AHORA).fechaEntrevista).toContain('anterior');
+    expect(validarFechasEvaluacion(s, { fechaEntrevista: '2030-07-18T17:22' }, AHORA).fechaEntrevista).toContain('año');
+  });
+
+  test('el informe no puede ser futuro ni anterior a la entrevista', () => {
+    expect(validarFechasEvaluacion(s, { fechaInforme: '2026-12-25' }, AHORA).fechaInforme).toContain('futura');
+    expect(validarFechasEvaluacion(s, { fechaEntrevista: '2026-10-22T10:00', fechaInforme: '2026-10-21' }, AHORA).fechaInforme).toContain('anterior a la entrevista');
+  });
+
+  test('si la entrevista ya se hizo, su fecha no puede ser futura', () => {
+    const realizada = solicitud({ etapa: 'realizada' });
+    expect(validarFechasEvaluacion(realizada, { fechaEntrevista: '2026-10-25T10:00' }, AHORA).fechaEntrevista).toContain('no puede ser futura');
   });
 });
 

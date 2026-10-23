@@ -19,6 +19,16 @@ import {
 } from '../servicios/solicitudes.js';
 import { ErrorServicio } from '../servicios/errores.js';
 
+// Fechas relativas a hoy (así las pruebas sirven cualquier día que se corran)
+const diaMas = (dias) => {
+  const d = new Date();
+  d.setDate(d.getDate() + dias);
+  return d.toLocaleDateString('sv-SE');
+};
+const HOY = diaMas(0);
+const ENTREVISTA_HECHA = `${HOY}T00:00`; // hoy temprano: ya ocurrió
+const ENTREVISTA_FUTURA = `${diaMas(5)}T10:00`;
+
 // Ejecuta y devuelve el error de servicio (o falla si no hubo error)
 const errorDe = (fn) => {
   try {
@@ -157,7 +167,7 @@ describe('Reglas del proceso (etapas)', () => {
 
   test('con fecha de entrevista se agenda, y el evaluador queda como responsable', () => {
     const s = solicitudNueva();
-    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: '2026-10-28T10:00' });
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_FUTURA });
     const { solicitud } = cambiarEtapa(repo, ctx.evaluador, s.id, 'agendada');
     expect(solicitud.etapa).toBe('agendada');
     expect(solicitud.evaluador.nombre).toBe('Paula Vidal');
@@ -166,14 +176,14 @@ describe('Reglas del proceso (etapas)', () => {
 
   test('no se puede enviar el informe sin resultado', () => {
     const s = solicitudNueva();
-    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: '2026-10-28T10:00' });
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_HECHA });
     const err = errorDe(() => cambiarEtapa(repo, ctx.evaluador, s.id, 'informe_enviado'));
     expect(err.extra.errores.resultado).toBeTruthy();
   });
 
   test('al enviar el informe se pone la fecha de hoy si falta, se calcula el timing y se avisa', () => {
     const s = solicitudNueva();
-    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: '2026-10-28T10:00', resultado: 'recomendado' });
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_HECHA, resultado: 'recomendado' });
     const { solicitud, informeEnviado } = cambiarEtapa(repo, ctx.evaluador, s.id, 'informe_enviado');
     expect(informeEnviado).toBe(true);
     expect(solicitud.evaluacion.fechaInforme).toBe(new Date().toLocaleDateString('sv-SE'));
@@ -193,6 +203,41 @@ describe('Reglas del proceso (etapas)', () => {
   });
 });
 
+describe('Reglas de fechas (la línea de tiempo debe tener sentido)', () => {
+  test('no se puede marcar como realizada una entrevista que todavía no ocurre', () => {
+    const s = solicitudNueva();
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_FUTURA });
+    cambiarEtapa(repo, ctx.evaluador, s.id, 'agendada');
+    const err = errorDe(() => cambiarEtapa(repo, ctx.evaluador, s.id, 'realizada'));
+    expect(err.estado).toBe(422);
+    expect(err.extra.errores.fechaEntrevista).toContain('todavía no ocurre');
+  });
+
+  test('la entrevista no puede ser antes de la solicitud ni más de un año después', () => {
+    const s = solicitudNueva();
+    expect(errorDe(() => guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: `${diaMas(-3)}T10:00` })).extra.errores.fechaEntrevista).toContain('anterior');
+    expect(errorDe(() => guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: `${diaMas(400)}T10:00` })).extra.errores.fechaEntrevista).toContain('año');
+  });
+
+  test('el informe no puede ser futuro ni anterior a la entrevista', () => {
+    const s = solicitudNueva();
+    expect(errorDe(() => guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaInforme: diaMas(30) })).extra.errores.fechaInforme).toContain('futura');
+    // Entrevista en 5 días + informe hoy = informe antes de la entrevista
+    const err = errorDe(() =>
+      guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_FUTURA, fechaInforme: HOY })
+    );
+    expect(err.extra.errores.fechaInforme).toBe('El informe no puede ser anterior a la entrevista.');
+  });
+
+  test('con la entrevista ya realizada, su fecha no puede moverse al futuro', () => {
+    const s = solicitudNueva();
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_HECHA });
+    cambiarEtapa(repo, ctx.evaluador, s.id, 'realizada');
+    const err = errorDe(() => guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_FUTURA }));
+    expect(err.extra.errores.fechaEntrevista).toContain('no puede ser futura');
+  });
+});
+
 describe('Registrar la evaluación', () => {
   test('guarda observaciones y resultado, y lo deja en el historial', () => {
     const s = solicitudNueva();
@@ -209,7 +254,7 @@ describe('Registrar la evaluación', () => {
 
   test('con el informe enviado, el resultado no se puede borrar', () => {
     const s = solicitudNueva();
-    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: '2026-10-28T10:00', resultado: 'recomendado' });
+    guardarEvaluacion(repo, ctx.evaluador, s.id, { fechaEntrevista: ENTREVISTA_HECHA, resultado: 'recomendado' });
     cambiarEtapa(repo, ctx.evaluador, s.id, 'informe_enviado');
     expect(errorDe(() => guardarEvaluacion(repo, ctx.evaluador, s.id, { resultado: '' })).extra.errores.resultado).toBeTruthy();
   });
