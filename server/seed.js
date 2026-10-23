@@ -151,7 +151,7 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
           evaluacion.observaciones = 'Entrevista realizada. Informe en preparación.';
         }
         repo.evaluaciones.guardar(solicitudId, evaluacion);
-        repo.historial.registrar(solicitudId, evaluador?.id, 'Etapa cambiada', `→ ${ETAPAS[caso.etapa]}`);
+        repo.historial.registrar(solicitudId, evaluador?.id, 'Etapa cambiada', `${ETAPAS.recibida} → ${ETAPAS[caso.etapa]}`);
       }
       return solicitudId;
     })

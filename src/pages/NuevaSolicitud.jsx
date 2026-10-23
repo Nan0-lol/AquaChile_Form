@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   FaUserPlus,
   FaSearch,
@@ -33,7 +33,6 @@ import {
   validarSolicitudCompleta,
   construirFormData,
 } from '../utils/solicitud';
-import { puede } from '../auth';
 import './NuevaSolicitud.css';
 
 const VALORES_INICIALES = {
@@ -265,8 +264,11 @@ const NuevaSolicitud = () => {
   const [evaluadores, setEvaluadores] = useState([]);
   const [carga, setCarga] = useState('cargando'); // cargando | lista | error
 
-  const [modo, setModo] = useState('nuevo'); // nuevo | existente
-  const [candidato, setCandidato] = useState(null); // candidato ya registrado elegido
+  // Si se llega desde la ficha de un candidato, ya viene elegido
+  const location = useLocation();
+  const desdeFicha = location.state?.candidato ?? null;
+  const [modo, setModo] = useState(desdeFicha ? 'existente' : 'nuevo'); // nuevo | existente
+  const [candidato, setCandidato] = useState(desdeFicha); // candidato ya registrado elegido
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [cv, setCv] = useState(null);
   const [descriptor, setDescriptor] = useState(null);
@@ -495,11 +497,9 @@ const NuevaSolicitud = () => {
             <button type="button" className="ns-btn ns-btn--primary" onClick={reiniciar}>
               Crear otra solicitud
             </button>
-            {puede('indicadores:ver') && (
-              <Link to="/dashboard" className="ns-btn ns-btn--outline">
-                Ir al panel
-              </Link>
-            )}
+            <Link to={`/solicitudes/${creada.id}`} className="ns-btn ns-btn--outline">
+              Ver la solicitud
+            </Link>
           </div>
         </section>
       </main>
@@ -707,7 +707,7 @@ const NuevaSolicitud = () => {
               <input
                 type="text"
                 maxLength={20}
-                placeholder="Ej. A170010301"
+                placeholder="Ej. CC-1050"
                 autoComplete="off"
                 {...propsCampo('ceco', { ayuda: true })}
               />

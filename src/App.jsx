@@ -3,13 +3,20 @@ import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
+import Solicitudes from './pages/Solicitudes';
 import NuevaSolicitud from './pages/NuevaSolicitud';
+import DetalleSolicitud from './pages/DetalleSolicitud';
+import Candidatos from './pages/Candidatos';
+import DetalleCandidato from './pages/DetalleCandidato';
 import RutaProtegida from './RutaProtegida';
 import { haySesion, rutaInicio } from './auth';
 import './App.css'; // colores y estilos globales
 
-// La raíz lleva a la pantalla de inicio de cada rol (o al login si no hay sesión)
+// La raíz lleva a la pantalla de inicio (o al login si no hay sesión)
 const Inicio = () => <Navigate to={haySesion() ? rutaInicio() : '/login'} replace />;
+
+// Atajo: página del panel que exige un permiso
+const conPermiso = (permiso, pagina) => <RutaProtegida permiso={permiso}>{pagina}</RutaProtegida>;
 
 function App() {
   return (
@@ -28,22 +35,12 @@ function App() {
             </RutaProtegida>
           }
         >
-          <Route
-            path="/dashboard"
-            element={
-              <RutaProtegida permiso="indicadores:ver">
-                <Dashboard />
-              </RutaProtegida>
-            }
-          />
-          <Route
-            path="/solicitudes/nueva"
-            element={
-              <RutaProtegida permiso="solicitud:crear">
-                <NuevaSolicitud />
-              </RutaProtegida>
-            }
-          />
+          <Route path="/dashboard" element={conPermiso('indicadores:ver', <Dashboard />)} />
+          <Route path="/solicitudes" element={conPermiso('solicitud:ver', <Solicitudes />)} />
+          <Route path="/solicitudes/nueva" element={conPermiso('solicitud:crear', <NuevaSolicitud />)} />
+          <Route path="/solicitudes/:id" element={conPermiso('solicitud:ver', <DetalleSolicitud />)} />
+          <Route path="/candidatos" element={conPermiso('candidato:ver', <Candidatos />)} />
+          <Route path="/candidatos/:id" element={conPermiso('candidato:ver', <DetalleCandidato />)} />
         </Route>
 
         <Route path="/" element={<Inicio />} />

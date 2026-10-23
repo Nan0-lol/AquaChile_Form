@@ -58,8 +58,8 @@ export const haySesion = () => Boolean(leerSesion());
 /** true si el rol del usuario permite la acción (ej. 'solicitud:crear') */
 export const puede = (accion) => Boolean(leerSesion()?.permisos?.includes(accion));
 
-/** Primera pantalla después de entrar, según lo que puede hacer cada rol */
-export const rutaInicio = () => (puede('solicitud:crear') ? '/solicitudes/nueva' : '/dashboard');
+/** Primera pantalla después de entrar: todos los roles parten en la lista de solicitudes */
+export const rutaInicio = () => '/solicitudes';
 
 /**
  * Valida las credenciales contra el backend.

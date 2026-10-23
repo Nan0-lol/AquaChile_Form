@@ -296,6 +296,33 @@
   }
 }
 
+/* Celulares: el menú tiene hasta 4 secciones, así que todo se compacta */
+@media (max-width: 480px) {
+  .db-header {
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .db-header-left,
+  .db-header-right {
+    gap: 8px;
+  }
+  .db-logo {
+    height: 26px;
+  }
+  .db-nav {
+    gap: 2px;
+    margin-left: 4px;
+  }
+  .db-nav-link {
+    width: 36px;
+    height: 36px;
+  }
+  .db-theme-btn {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 @keyframes dbMenuFade {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }

@@ -21,7 +21,7 @@ const VALIDOS = {
   nombreCargo: 'Operador de máquina',
   ubicacion: 'Planta Calbuco',
   unidad: 'industrial',
-  ceco: 'a170010301',
+  ceco: 'cc-1050',
   evaluadorId: 'ev-1',
   requiereReferencias: true,
   referido: false,
@@ -53,7 +53,7 @@ describe('Campos del formulario', () => {
 
   test('el centro de costo es opcional, pero si viene debe tener formato', () => {
     expect(validarCampoSolicitud('ceco', '')).toBe('');
-    expect(validarCampoSolicitud('ceco', 'a170010301')).toBe('');
+    expect(validarCampoSolicitud('ceco', 'cc-1050')).toBe('');
     expect(validarCampoSolicitud('ceco', 'A17 00')).toBeTruthy();
   });
 
@@ -99,7 +99,7 @@ describe('Datos que se envían al servidor', () => {
   test('candidato nuevo: manda sus datos normalizados', () => {
     const datos = construirFormData(VALIDOS, { cv: archivo('cv.pdf') });
     expect(datos.get('telefono')).toBe('+56912345678');
-    expect(datos.get('ceco')).toBe('A170010301');
+    expect(datos.get('ceco')).toBe('CC-1050');
     expect(datos.get('aspectosIndagar')).toBe('Trabajo en turnos.');
     expect(datos.get('requiereReferencias')).toBe('true');
     expect(datos.get('candidatoId')).toBe(null);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { FaSignOutAlt, FaMoon, FaSun, FaChartPie, FaPlusCircle } from 'react-icons/fa';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { FaSignOutAlt, FaMoon, FaSun, FaChartPie, FaPlusCircle, FaClipboardList, FaUsers } from 'react-icons/fa';
 import { obtenerUsuario, cerrarSesion, puede, NOMBRES_ROL } from '../auth';
 import './AdminHeader.css';
 
@@ -14,6 +14,8 @@ const iniciales = (nombre = '') =>
 
 // Secciones del panel. Cada rol ve solo las que su permiso le deja usar.
 const SECCIONES = [
+  { ruta: '/solicitudes', texto: 'Solicitudes', Icono: FaClipboardList, permiso: 'solicitud:ver' },
+  { ruta: '/candidatos', texto: 'Candidatos', Icono: FaUsers, permiso: 'candidato:ver' },
   { ruta: '/dashboard', texto: 'Panel', Icono: FaChartPie, permiso: 'indicadores:ver' },
   { ruta: '/solicitudes/nueva', texto: 'Nueva solicitud', Icono: FaPlusCircle, permiso: 'solicitud:crear' },
 ];
@@ -26,6 +28,12 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
   const nombre = usuario?.nombre || 'Usuario';
   const rol = NOMBRES_ROL[usuario?.rol] || 'Reclutamiento AquaChile';
   const secciones = SECCIONES.filter((s) => puede(s.permiso));
+  const { pathname } = useLocation();
+  // "Solicitudes" queda marcada también en el detalle, pero no en "Nueva solicitud"
+  const activa = (ruta) =>
+    ruta === '/solicitudes'
+      ? pathname === ruta || (pathname.startsWith('/solicitudes/') && pathname !== '/solicitudes/nueva')
+      : pathname === ruta || pathname.startsWith(`${ruta}/`);
 
   // Cerrar el menú con Escape
   useEffect(() => {
@@ -51,14 +59,15 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
       {secciones.length > 0 && (
         <nav className="db-nav" aria-label="Secciones del panel">
           {secciones.map(({ ruta, texto, Icono }) => (
-            <NavLink
+            <Link
               key={ruta}
               to={ruta}
-              className={({ isActive }) => `db-nav-link${isActive ? ' is-active' : ''}`}
+              className={`db-nav-link${activa(ruta) ? ' is-active' : ''}`}
+              aria-current={activa(ruta) ? 'page' : undefined}
             >
               <Icono aria-hidden="true" />
               <span className="db-nav-text">{texto}</span>
-            </NavLink>
+            </Link>
           ))}
         </nav>
       )}
