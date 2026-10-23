@@ -1,12 +1,15 @@
-// Correo de confirmación al postulante.
+// =====================================================================
+// AVISOS POR CORREO (mismo flujo que hoy hacen con Forms y correo):
+//   1. Nueva solicitud  → aviso al profesional evaluador asignado.
+//   2. Informe enviado  → aviso al analista que pidió la evaluación.
 //
-// Por defecto funciona en MODO PRUEBA (Ethereal): no se envía ningún correo real,
-// y en la terminal aparece un enlace para ver cómo habría llegado.
-// Para enviar correos reales, define las variables SMTP_* (ver más abajo).
+// Por defecto funciona en MODO PRUEBA (Ethereal): no se envía ningún correo
+// real, y en la terminal aparece un enlace para ver cómo habría llegado.
+// Para enviar correos reales, define las variables SMTP_* en server/.env.
+// =====================================================================
+import { FAMILIAS_CARGO, RESULTADOS } from './modelos/catalogos.js';
 
-import { AREAS } from './validaciones.js';
-
-// Todo lo que escribió el usuario se escapa antes de entrar al HTML del correo.
+// Todo lo que escribió un usuario se escapa antes de entrar al HTML del correo.
 export function escaparHtml(valor = '') {
   return String(valor)
     .replace(/&/g, '&amp;')
@@ -16,52 +19,81 @@ export function escaparHtml(valor = '') {
     .replace(/'/g, '&#39;');
 }
 
-export function construirCorreo(datos, empresa = 'Equipo de Reclutamiento') {
-  const primerNombre = (datos.nombreCompleto || '').trim().split(/\s+/)[0] || '';
-  const familia = AREAS[datos.area] || datos.area || '';
-  const cargo = datos.nombreCargo || '';
+const primerNombre = (nombre = '') => String(nombre).trim().split(/\s+/)[0] || '';
 
-  const saludo = primerNombre ? `Hola ${primerNombre},` : 'Hola,';
-
-  const texto = [
-    saludo,
-    '',
-    `Recibimos tu postulación al cargo "${cargo}" (${familia}).`,
-    '',
-    'Revisaremos tu CV y, si tu perfil avanza en el proceso, nos pondremos en contacto contigo por correo o al número que registraste.',
-    '',
-    'Gracias por tu interés.',
-    '',
-    empresa,
-    '',
-    'Este es un mensaje automático; no es necesario responderlo.',
-  ].join('\n');
-
-  const html = `<!doctype html>
+const plantilla = (titulo, parrafos, pie) => `<!doctype html>
 <html lang="es">
-  <body style="margin:0;padding:24px;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
+  <body style="margin:0;padding:24px;background:#f0f4f8;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:10px;overflow:hidden;">
       <div style="background:#3e5463;color:#ffffff;padding:18px 24px;font-size:18px;font-weight:bold;">
-        Recibimos tu postulación
+        ${escaparHtml(titulo)}
       </div>
       <div style="padding:24px;font-size:15px;line-height:1.55;">
-        <p style="margin:0 0 14px;">${escaparHtml(saludo)}</p>
-        <p style="margin:0 0 14px;">Recibimos tu postulación al cargo
-          <strong>${escaparHtml(cargo)}</strong> (${escaparHtml(familia)}).</p>
-        <p style="margin:0 0 14px;">Revisaremos tu CV y, si tu perfil avanza en el proceso,
-          nos pondremos en contacto contigo por correo o al número que registraste.</p>
-        <p style="margin:0 0 4px;">Gracias por tu interés.</p>
-        <p style="margin:0;font-weight:bold;">${escaparHtml(empresa)}</p>
+        ${parrafos.map((p) => `<p style="margin:0 0 14px;">${p}</p>`).join('\n        ')}
       </div>
       <div style="padding:12px 24px;background:#f8fafc;color:#64748b;font-size:12px;">
-        Este es un mensaje automático; no es necesario responderlo.
+        ${escaparHtml(pie)}
       </div>
     </div>
   </body>
 </html>`;
 
-  // El asunto es fijo: nunca lleva texto escrito por el usuario.
-  return { asunto: 'Recibimos tu postulación', texto, html };
+const PIE = 'Mensaje automático del Sistema de Evaluaciones Psicolaborales.';
+
+/** Aviso al evaluador: llegó una solicitud nueva */
+export function construirAvisoNuevaSolicitud(solicitud) {
+  const evaluador = solicitud.evaluador?.nombre ?? '';
+  const familia = FAMILIAS_CARGO[solicitud.familiaCargo] ?? solicitud.familiaCargo;
+  const datos = `${solicitud.candidato.nombre} · ${solicitud.nombreCargo} (${familia}) · ${solicitud.ubicacion}`;
+  const texto = [
+    `Hola ${primerNombre(evaluador)},`,
+    '',
+    `${solicitud.analista.nombre} te asignó una nueva evaluación psicolaboral:`,
+    datos,
+    '',
+    'Ingresa al sistema para revisar el CV y agendar la entrevista.',
+    '',
+    PIE,
+  ].join('\n');
+  const html = plantilla(
+    'Nueva solicitud de evaluación',
+    [
+      `Hola ${escaparHtml(primerNombre(evaluador))},`,
+      `<strong>${escaparHtml(solicitud.analista.nombre)}</strong> te asignó una nueva evaluación psicolaboral:`,
+      `<strong>${escaparHtml(datos)}</strong>`,
+      'Ingresa al sistema para revisar el CV y agendar la entrevista.',
+    ],
+    PIE
+  );
+  // El asunto es fijo: nunca lleva texto escrito por un usuario.
+  return { asunto: 'Nueva solicitud de evaluación psicolaboral', texto, html };
+}
+
+/** Aviso al analista: el informe está listo */
+export function construirAvisoInformeEnviado(solicitud) {
+  const resultado = RESULTADOS[solicitud.evaluacion?.resultado] ?? 'Sin resultado';
+  const datos = `${solicitud.candidato.nombre} · ${solicitud.nombreCargo}`;
+  const texto = [
+    `Hola ${primerNombre(solicitud.analista.nombre)},`,
+    '',
+    `La evaluación psicolaboral de ${datos} está finalizada.`,
+    `Resultado: ${resultado}.`,
+    '',
+    'Ingresa al sistema para ver el detalle.',
+    '',
+    PIE,
+  ].join('\n');
+  const html = plantilla(
+    'Evaluación finalizada',
+    [
+      `Hola ${escaparHtml(primerNombre(solicitud.analista.nombre))},`,
+      `La evaluación psicolaboral de <strong>${escaparHtml(datos)}</strong> está finalizada.`,
+      `Resultado: <strong>${escaparHtml(resultado)}</strong>.`,
+      'Ingresa al sistema para ver el detalle.',
+    ],
+    PIE
+  );
+  return { asunto: 'Evaluación psicolaboral finalizada', texto, html };
 }
 
 // --- Conexión con el servidor de correo ---
@@ -70,17 +102,11 @@ async function crearTransporteDesdeEntorno() {
   try {
     ({ default: nodemailer } = await import('nodemailer'));
   } catch {
-    console.warn(
-      'Correo desactivado: falta instalar nodemailer (en la carpeta server: npm install nodemailer).'
-    );
+    console.warn('Correo desactivado: falta instalar nodemailer (en la carpeta server: npm install nodemailer).');
     return null;
   }
 
-  const tiempos = {
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-  };
+  const tiempos = { connectionTimeout: 10_000, greetingTimeout: 10_000, socketTimeout: 15_000 };
 
   // Correo real: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS y MAIL_FROM
   if (process.env.SMTP_HOST) {
@@ -89,16 +115,10 @@ async function crearTransporteDesdeEntorno() {
       host: process.env.SMTP_HOST,
       port: puerto,
       secure: puerto === 465,
-      auth: process.env.SMTP_USER
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        : undefined,
+      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
       ...tiempos,
     });
-    return {
-      transporte,
-      desde: process.env.MAIL_FROM || process.env.SMTP_USER,
-      vistaPrevia: null,
-    };
+    return { transporte, desde: process.env.MAIL_FROM || process.env.SMTP_USER, vistaPrevia: null };
   }
 
   // Modo prueba: cuenta temporal de Ethereal, no llega nada a ninguna bandeja real.
@@ -112,52 +132,43 @@ async function crearTransporteDesdeEntorno() {
   });
   return {
     transporte,
-    desde: `"Reclutamiento" <${cuenta.user}>`,
+    desde: `"Evaluaciones Psicolaborales" <${cuenta.user}>`,
     vistaPrevia: (info) => nodemailer.getTestMessageUrl(info) || null,
   };
 }
 
 /**
  * Servicio de correo. Un fallo al enviar NUNCA lanza error:
- * la postulación ya está guardada y eso es lo importante.
+ * la operación ya quedó guardada y eso es lo importante.
  * Para pruebas se puede pasar { obtenerTransporte } con un transporte falso.
  */
-export function crearServicioCorreo({
-  obtenerTransporte = crearTransporteDesdeEntorno,
-  empresa = process.env.NOMBRE_EMPRESA || 'Equipo de Reclutamiento',
-} = {}) {
+export function crearServicioCorreo({ obtenerTransporte = crearTransporteDesdeEntorno } = {}) {
   let guardado = null;
   const obtener = async () => {
     if (!guardado) guardado = await obtenerTransporte();
     return guardado;
   };
 
+  const enviar = async (para, { asunto, texto, html }) => {
+    if (!para) return { ok: false, motivo: 'sin-destinatario' };
+    try {
+      const conexion = await obtener();
+      if (!conexion) return { ok: false, motivo: 'sin-transporte' };
+      const info = await conexion.transporte.sendMail({ from: conexion.desde, to: para, subject: asunto, text: texto, html });
+      const vista = conexion.vistaPrevia?.(info);
+      console.log(vista ? `Correo de prueba (no se envió a nadie). Vista previa: ${vista}` : `Aviso enviado a ${para}.`);
+      return { ok: true };
+    } catch (err) {
+      console.error('No se pudo enviar el aviso por correo:', err.message);
+      return { ok: false, motivo: 'error' };
+    }
+  };
+
   return {
-    async enviarConfirmacion(datos) {
-      try {
-        const conexion = await obtener();
-        if (!conexion) return { ok: false, motivo: 'sin-transporte' };
-
-        const { asunto, texto, html } = construirCorreo(datos, empresa);
-        const info = await conexion.transporte.sendMail({
-          from: conexion.desde,
-          to: datos.correo,
-          subject: asunto,
-          text: texto,
-          html,
-        });
-
-        const vista = conexion.vistaPrevia?.(info);
-        console.log(
-          vista
-            ? `Correo de prueba generado (no se envió a nadie). Vista previa: ${vista}`
-            : `Correo de confirmación enviado a ${datos.correo}.`
-        );
-        return { ok: true };
-      } catch (err) {
-        console.error('No se pudo enviar el correo de confirmación:', err.message);
-        return { ok: false, motivo: 'error' };
-      }
-    },
+    /** solicitud con el formato de servicios/formato.js; correoEvaluador viene de la base */
+    avisarNuevaSolicitud: (solicitud, correoEvaluador) =>
+      enviar(correoEvaluador, construirAvisoNuevaSolicitud(solicitud)),
+    avisarInformeEnviado: (solicitud, correoAnalista) =>
+      enviar(correoAnalista, construirAvisoInformeEnviado(solicitud)),
   };
 }

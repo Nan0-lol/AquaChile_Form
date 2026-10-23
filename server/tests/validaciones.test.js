@@ -2,132 +2,125 @@ import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { validarCampos, validarArchivo, rutEsValido, formatearRut } from '../validaciones.js';
+import {
+  validarCandidato,
+  validarSolicitud,
+  validarEvaluacion,
+  validarArchivo,
+  aBooleano,
+} from '../validaciones.js';
+import { CANDIDATO, SOLICITUD } from './ayudas.js';
 
-// Una postulación correcta; cada prueba cambia solo lo que quiere revisar
-const BASE = {
-  nombreCompleto: 'María González',
-  rut: '12345678-5',
-  correo: 'Maria@Gmail.com',
-  celular: '+56 9 1234 5678',
-  area: 'planta',
-  nombreCargo: 'Operaria de planta',
-  carta: 'Hola,\nquiero trabajar en AquaChile.',
-  consentimiento: 'true',
-};
-
-const errores = (cambios) => validarCampos({ ...BASE, ...cambios }).errores;
-
-describe('validarCampos', () => {
-  test('una postulación correcta no tiene errores', () => {
-    expect(errores({})).toEqual([]);
+describe('Validación de candidato', () => {
+  test('un candidato correcto no tiene errores y se normaliza', () => {
+    const { errores, datos } = validarCandidato(CANDIDATO);
+    expect(errores).toEqual({});
+    expect(datos.correo).toBe('valentina.ortega@ejemplo.cl');
+    expect(datos.telefono).toBe('+56912345678');
   });
 
-  test('normaliza RUT, correo y celular antes de guardar', () => {
-    const { datos } = validarCampos(BASE);
-    expect(datos.rut).toBe('12.345.678-5');
-    expect(datos.correo).toBe('maria@gmail.com');
-    expect(datos.celular).toBe('+56912345678');
+  test('marca cada campo con su propio mensaje', () => {
+    const { errores } = validarCandidato({ nombre: 'A', correo: 'malo', telefono: '123', origen: 'otro' });
+    expect(Object.keys(errores).sort()).toEqual(['correo', 'nombre', 'origen', 'telefono']);
   });
 
-  test('rechaza un RUT con dígito verificador incorrecto', () => {
-    expect(errores({ rut: '12345678-9' })).toContain('El RUT no es válido.');
-  });
-
-  test('rechaza un correo mal escrito', () => {
-    expect(errores({ correo: 'maria@gmail' })).toContain('El correo electrónico no es válido.');
-  });
-
-  test('rechaza un celular que no es chileno', () => {
-    expect(errores({ celular: '12345' })).toContain('El número de celular no es válido.');
-  });
-
-  test('solo acepta las áreas del formulario', () => {
-    expect(errores({ area: 'tecnologia' })).toContain('El área de interés no es válida.');
-    // "toString" existe en todos los objetos de JavaScript: no debe colarse como área
-    expect(errores({ area: 'toString' })).toContain('El área de interés no es válida.');
-  });
-
-  test('exige el cargo', () => {
-    expect(errores({ nombreCargo: '' })).toContain('El cargo debe tener entre 2 y 100 caracteres.');
-  });
-
-  test('exige aceptar el tratamiento de datos', () => {
-    expect(errores({ consentimiento: '' })).toContain(
-      'Debes aceptar el tratamiento de tus datos personales.'
-    );
-  });
-
-  test('la carta es opcional, pero tiene un máximo', () => {
-    expect(errores({ carta: '' })).toEqual([]);
-    expect(errores({ carta: 'x'.repeat(3001) }).length).toBe(1);
+  test('al editar solo revisa los campos que vienen', () => {
+    const { errores, datos } = validarCandidato({ telefono: '9 8765 4321' }, { parcial: true });
+    expect(errores).toEqual({});
+    expect(datos).toEqual({ telefono: '+56987654321' });
   });
 
   test('rechaza caracteres de control en el nombre', () => {
-    expect(errores({ nombreCompleto: 'Ana\u0000Soto' })).toContain(
-      'El nombre debe tener entre 3 y 100 caracteres.'
-    );
-  });
-
-  test('no se cae si llegan datos que no son texto', () => {
-    expect(() => validarCampos({ nombreCompleto: ['x'], rut: 123, correo: null })).not.toThrow();
+    expect(validarCandidato({ ...CANDIDATO, nombre: 'Ana\u0000Soto' }).errores.nombre).toBeTruthy();
   });
 });
 
-describe('RUT', () => {
-  test('valida con módulo 11, incluido el dígito K', () => {
-    expect(rutEsValido('12.345.678-5')).toBe(true);
-    expect(rutEsValido('10.000.013-K')).toBe(true);
-    expect(rutEsValido('12.345.678-9')).toBe(false);
+describe('Validación de solicitud', () => {
+  test('una solicitud correcta no tiene errores', () => {
+    const { errores, datos } = validarSolicitud(SOLICITUD);
+    expect(errores).toEqual({});
+    expect(datos.ceco).toBe('C100200300');
+    expect(datos.requiereReferencias).toBe(true);
+    expect(datos.referido).toBe(false);
+    expect(datos.aspectosIndagar).toContain('\n');
   });
 
-  test('formatea con puntos y guion', () => {
-    expect(formatearRut('10000013k')).toBe('10.000.013-K');
+  test('solo acepta familias de cargo y unidades del catálogo', () => {
+    const { errores } = validarSolicitud({ ...SOLICITUD, familiaCargo: 'gerencia', unidad: 'toString' });
+    expect(errores.familiaCargo).toBeTruthy();
+    expect(errores.unidad).toBeTruthy();
+  });
+
+  test('el centro de costo es opcional pero con formato', () => {
+    expect(validarSolicitud({ ...SOLICITUD, ceco: '' }).errores).toEqual({});
+    expect(validarSolicitud({ ...SOLICITUD, ceco: 'A1; DROP' }).errores.ceco).toBeTruthy();
+  });
+
+  test('exige cargo y ubicación', () => {
+    const { errores } = validarSolicitud({ ...SOLICITUD, nombreCargo: '', ubicacion: ' ' });
+    expect(errores.nombreCargo).toBeTruthy();
+    expect(errores.ubicacion).toBeTruthy();
+  });
+
+  test('limita el largo de los aspectos a indagar', () => {
+    expect(validarSolicitud({ ...SOLICITUD, aspectosIndagar: 'x'.repeat(2001) }).errores.aspectosIndagar).toBeTruthy();
+  });
+
+  test('entiende "sí", "1" y true como verdadero', () => {
+    expect([aBooleano('sí'), aBooleano('1'), aBooleano(true), aBooleano('no'), aBooleano(undefined)]).toEqual([
+      true, true, true, false, false,
+    ]);
   });
 });
 
-describe('validarArchivo (revisa el contenido real, no solo la extensión)', () => {
+describe('Validación de evaluación', () => {
+  test('acepta fecha con hora para la entrevista y fecha para el informe', () => {
+    const { errores, datos } = validarEvaluacion({
+      fechaEntrevista: '2026-10-28T10:30',
+      resultado: 'recomendado',
+      fechaInforme: '2026-10-30',
+      observaciones: 'Buen desempeño.\nSe recomienda.',
+    });
+    expect(errores).toEqual({});
+    expect(datos.resultado).toBe('recomendado');
+  });
+
+  test('rechaza fechas imposibles y resultados que no existen', () => {
+    const { errores } = validarEvaluacion({ fechaEntrevista: '2026-02-31T10:00', fechaInforme: '30-10-2026', resultado: 'apto' });
+    expect(Object.keys(errores).sort()).toEqual(['fechaEntrevista', 'fechaInforme', 'resultado']);
+  });
+
+  test('un campo vacío borra el valor (null)', () => {
+    expect(validarEvaluacion({ resultado: '', fechaEntrevista: '' }).datos).toEqual({ resultado: null, fechaEntrevista: null });
+  });
+});
+
+describe('Archivos: revisa el contenido real, no solo la extensión', () => {
   let carpeta;
   const crear = (nombre, contenido) => {
     const ruta = path.join(carpeta, nombre);
     fs.writeFileSync(ruta, contenido);
     return ruta;
   };
-
   beforeAll(() => {
-    carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'aquachile-test-'));
+    carpeta = fs.mkdtempSync(path.join(os.tmpdir(), 'aquachile-val-'));
   });
+  afterAll(() => fs.rmSync(carpeta, { recursive: true, force: true }));
 
-  afterAll(() => {
-    fs.rmSync(carpeta, { recursive: true, force: true });
-  });
-
-  test('acepta un PDF real', async () => {
-    const ruta = crear('real.pdf', '%PDF-1.7\ncontenido');
-    expect(await validarArchivo(ruta, '.pdf')).toBe(null);
-  });
-
-  test('rechaza un archivo que solo se llama .pdf', async () => {
-    const ruta = crear('falso.pdf', 'esto es texto, no un PDF');
-    expect(await validarArchivo(ruta, '.pdf')).toBe('El archivo no es un PDF válido.');
+  test('acepta un PDF real y rechaza uno falso', async () => {
+    expect(await validarArchivo(crear('real.pdf', '%PDF-1.7\nhola'), '.pdf')).toBe(null);
+    expect(await validarArchivo(crear('falso.pdf', 'texto'), '.pdf')).toBe('El archivo no es un PDF válido.');
   });
 
   test('rechaza archivos vacíos', async () => {
-    const ruta = crear('vacio.pdf', '');
-    expect(await validarArchivo(ruta, '.pdf')).toBe('El archivo está vacío.');
+    expect(await validarArchivo(crear('vacio.pdf', ''), '.pdf')).toBe('El archivo está vacío.');
   });
 
-  test('acepta un DOCX con estructura de Word', async () => {
-    const contenido = Buffer.concat([
-      Buffer.from([0x50, 0x4b, 0x03, 0x04]),
-      Buffer.from('[Content_Types].xml ... word/document.xml'),
-    ]);
-    expect(await validarArchivo(crear('real.docx', contenido), '.docx')).toBe(null);
-  });
-
-  test('rechaza un ZIP cualquiera renombrado a .docx', async () => {
-    const contenido = Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.from('fotos.zip')]);
-    expect(await validarArchivo(crear('falso.docx', contenido), '.docx')).toBe(
+  test('acepta un DOCX con estructura de Word y rechaza un ZIP cualquiera', async () => {
+    const zip = Buffer.from([0x50, 0x4b, 0x03, 0x04]);
+    const real = Buffer.concat([zip, Buffer.from('[Content_Types].xml word/document.xml')]);
+    expect(await validarArchivo(crear('real.docx', real), '.docx')).toBe(null);
+    expect(await validarArchivo(crear('falso.docx', Buffer.concat([zip, Buffer.from('fotos')])), '.docx')).toBe(
       'El archivo no es un DOCX válido.'
     );
   });

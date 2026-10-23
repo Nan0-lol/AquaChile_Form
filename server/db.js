@@ -1,26 +1,127 @@
+// =====================================================================
+// ACCESO A DATOS (repositorio)
+// Única capa que habla con la base de datos. Todas las consultas usan
+// parámetros (?) para que lo que escriba un usuario nunca se ejecute como SQL.
+//
+// Modelo:
+//   usuarios ──┐ (analista que pide / evaluador responsable)
+//   candidatos ─┴─< solicitudes ──1:1── evaluaciones
+//                        └──< historial (quién hizo qué y cuándo)
+// =====================================================================
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // SQLite viene incluido en Node 22.5+. Se carga con require (y no con import)
 // para que funcione igual al correr el servidor y al correr las pruebas con Vitest.
 const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite');
 
-// La base se guarda en server/data/postulaciones.db
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// La base se guarda en server/data/aquachile.db
 // (se puede cambiar la carpeta con la variable de entorno CARPETA_DATOS)
 const CARPETA_DATOS = process.env.CARPETA_DATOS || path.join(__dirname, 'data');
 
-// Columnas agregadas después de la primera versión de la tabla.
-// Si la base ya existía, se agregan solas al arrancar (no se pierde nada).
-const COLUMNAS_NUEVAS = {
-  rut: "TEXT NOT NULL DEFAULT ''",
-  carta: "TEXT NOT NULL DEFAULT ''",
-  estado: "TEXT NOT NULL DEFAULT 'pendiente'",
-  actualizado_en: 'TEXT',
-};
+const ESQUEMA = `
+  CREATE TABLE IF NOT EXISTS usuarios (
+    id             TEXT PRIMARY KEY,
+    usuario        TEXT NOT NULL UNIQUE,
+    nombre         TEXT NOT NULL,
+    correo         TEXT NOT NULL DEFAULT '',
+    rol            TEXT NOT NULL CHECK (rol IN ('admin', 'analista', 'evaluador', 'jefatura')),
+    password_hash  TEXT NOT NULL,
+    password_sal   TEXT NOT NULL,
+    activo         INTEGER NOT NULL DEFAULT 1,
+    creado_en      TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS candidatos (
+    id              TEXT PRIMARY KEY,
+    nombre          TEXT NOT NULL,
+    correo          TEXT NOT NULL,
+    telefono        TEXT NOT NULL,
+    origen          TEXT NOT NULL CHECK (origen IN ('interno', 'externo')),
+    creado_en       TEXT NOT NULL,
+    actualizado_en  TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS solicitudes (
+    id                          TEXT PRIMARY KEY,
+    candidato_id                TEXT NOT NULL REFERENCES candidatos(id) ON DELETE CASCADE,
+    analista_id                 TEXT NOT NULL REFERENCES usuarios(id),
+    evaluador_id                TEXT REFERENCES usuarios(id),
+    familia_cargo               TEXT NOT NULL,
+    nombre_cargo                TEXT NOT NULL,
+    ubicacion                   TEXT NOT NULL,
+    unidad                      TEXT NOT NULL,
+    ceco                        TEXT NOT NULL DEFAULT '',
+    requiere_referencias        INTEGER NOT NULL DEFAULT 0,
+    referido                    INTEGER NOT NULL DEFAULT 0,
+    aspectos_indagar            TEXT NOT NULL DEFAULT '',
+    cv_archivo                  TEXT,
+    cv_nombre_original          TEXT,
+    cv_bytes                    INTEGER,
+    descriptor_archivo          TEXT,
+    descriptor_nombre_original  TEXT,
+    etapa                       TEXT NOT NULL DEFAULT 'recibida'
+                                CHECK (etapa IN ('recibida', 'agendada', 'realizada', 'informe_enviado')),
+    fecha_solicitud             TEXT NOT NULL,
+    actualizado_en              TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS evaluaciones (
+    id                TEXT PRIMARY KEY,
+    solicitud_id      TEXT NOT NULL UNIQUE REFERENCES solicitudes(id) ON DELETE CASCADE,
+    fecha_entrevista  TEXT,
+    observaciones     TEXT NOT NULL DEFAULT '',
+    resultado         TEXT CHECK (resultado IN ('recomendado', 'recomendado_obs', 'no_recomendado')),
+    fecha_informe     TEXT,
+    actualizado_en    TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS historial (
+    id            TEXT PRIMARY KEY,
+    solicitud_id  TEXT NOT NULL REFERENCES solicitudes(id) ON DELETE CASCADE,
+    usuario_id    TEXT REFERENCES usuarios(id),
+    accion        TEXT NOT NULL,
+    detalle       TEXT NOT NULL DEFAULT '',
+    creado_en     TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_solicitudes_candidato ON solicitudes (candidato_id);
+  CREATE INDEX IF NOT EXISTS idx_solicitudes_fecha ON solicitudes (fecha_solicitud);
+  CREATE INDEX IF NOT EXISTS idx_solicitudes_etapa ON solicitudes (etapa);
+  CREATE INDEX IF NOT EXISTS idx_historial_solicitud ON historial (solicitud_id);
+`;
+
+// Consulta base de una solicitud con su candidato, personas y evaluación
+const SELECT_SOLICITUD = `
+  SELECT s.*,
+         c.nombre   AS candidato_nombre,
+         c.correo   AS candidato_correo,
+         c.telefono AS candidato_telefono,
+         c.origen   AS candidato_origen,
+         a.nombre   AS analista_nombre,
+         a.correo   AS analista_correo,
+         ev.nombre  AS evaluador_nombre,
+         ev.correo  AS evaluador_correo,
+         e.fecha_entrevista,
+         e.observaciones,
+         e.resultado,
+         e.fecha_informe
+    FROM solicitudes s
+    JOIN candidatos c   ON c.id = s.candidato_id
+    JOIN usuarios a     ON a.id = s.analista_id
+    LEFT JOIN usuarios ev ON ev.id = s.evaluador_id
+    LEFT JOIN evaluaciones e ON e.solicitud_id = s.id
+`;
+
+const ahoraIso = () => new Date().toISOString();
+const nuevoId = () => crypto.randomUUID();
+// SQLite guarda booleanos como 0/1
+const bit = (valor) => (valor ? 1 : 0);
 
 /**
  * Abre (o crea) la base de datos y devuelve funciones para usarla.
@@ -30,91 +131,282 @@ export function crearRepositorio(ruta) {
   let rutaFinal = ruta;
   if (!rutaFinal) {
     fs.mkdirSync(CARPETA_DATOS, { recursive: true });
-    rutaFinal = path.join(CARPETA_DATOS, 'postulaciones.db');
+    rutaFinal = path.join(CARPETA_DATOS, 'aquachile.db');
   }
 
   const db = new DatabaseSync(rutaFinal);
+  db.exec('PRAGMA foreign_keys = ON;'); // activa las relaciones (y el borrado en cascada)
+  db.exec(ESQUEMA);
 
-  // Nota: la columna familia_cargo guarda el "área de interés" del formulario.
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS postulaciones (
-      id                 TEXT PRIMARY KEY,
-      nombre_completo    TEXT NOT NULL,
-      correo             TEXT NOT NULL,
-      celular            TEXT NOT NULL,
-      familia_cargo      TEXT NOT NULL,
-      nombre_cargo       TEXT NOT NULL,
-      cv_archivo         TEXT NOT NULL,
-      cv_nombre_original TEXT NOT NULL,
-      cv_bytes           INTEGER NOT NULL,
-      creado_en          TEXT NOT NULL
-    );
-    CREATE INDEX IF NOT EXISTS idx_postulaciones_creado_en
-      ON postulaciones (creado_en);
-  `);
+  const q = (sql) => db.prepare(sql);
 
-  // Migración: agrega las columnas que falten
-  const existentes = new Set(
-    db.prepare('PRAGMA table_info(postulaciones)').all().map((c) => c.name)
-  );
-  for (const [columna, definicion] of Object.entries(COLUMNAS_NUEVAS)) {
-    if (!existentes.has(columna)) {
-      db.exec(`ALTER TABLE postulaciones ADD COLUMN ${columna} ${definicion}`);
+  // Ejecuta varias operaciones como una sola: o se guardan todas, o ninguna
+  const transaccion = (fn) => {
+    db.exec('BEGIN');
+    try {
+      const resultado = fn();
+      db.exec('COMMIT');
+      return resultado;
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
     }
-  }
+  };
 
-  // Siempre con parámetros (?) para que lo que escriba el usuario
-  // nunca se interprete como código SQL.
-  const insertar = db.prepare(`
-    INSERT INTO postulaciones (
-      id, nombre_completo, rut, correo, celular, familia_cargo, nombre_cargo,
-      carta, cv_archivo, cv_nombre_original, cv_bytes, estado, creado_en
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)
-  `);
-  const listarUltimas = db.prepare(
-    'SELECT * FROM postulaciones ORDER BY creado_en DESC LIMIT ?'
-  );
-  const buscarPorId = db.prepare('SELECT * FROM postulaciones WHERE id = ?');
-  const cambiarEstado = db.prepare(
-    'UPDATE postulaciones SET estado = ?, actualizado_en = ? WHERE id = ?'
-  );
-  const contarTodas = db.prepare('SELECT COUNT(*) AS total FROM postulaciones');
-  const borrarPorId = db.prepare('DELETE FROM postulaciones WHERE id = ?');
-
-  return {
-    guardar(p) {
-      insertar.run(
-        p.id,
-        p.nombreCompleto,
-        p.rut,
-        p.correo,
-        p.celular,
-        p.area,
-        p.nombreCargo,
-        p.carta ?? '',
-        p.cvArchivo,
-        p.cvNombreOriginal,
-        p.cvBytes,
-        p.creadoEn
+  // -------------------------------------------------------------------
+  // USUARIOS
+  // -------------------------------------------------------------------
+  const usuarios = {
+    crear({ usuario, nombre, correo = '', rol, passwordHash, passwordSal }) {
+      const id = nuevoId();
+      q(`INSERT INTO usuarios (id, usuario, nombre, correo, rol, password_hash, password_sal, creado_en)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, usuario, nombre, correo, rol, passwordHash, passwordSal, ahoraIso()
       );
+      return id;
     },
-    listar({ limite = 1000 } = {}) {
-      return listarUltimas.all(limite);
+    buscarPorUsuario(usuario) {
+      return q('SELECT * FROM usuarios WHERE usuario = ? AND activo = 1').get(usuario) ?? null;
     },
     obtener(id) {
-      return buscarPorId.get(id) ?? null;
+      return q('SELECT * FROM usuarios WHERE id = ?').get(id) ?? null;
     },
-    actualizarEstado(id, estado) {
-      const resultado = cambiarEstado.run(estado, new Date().toISOString(), id);
-      return Number(resultado.changes) > 0;
-    },
-    /** Borra la postulación para siempre. Devuelve true si existía. */
-    eliminar(id) {
-      return Number(borrarPorId.run(id).changes) > 0;
+    /** Lista pública (sin contraseñas), opcionalmente filtrada por rol */
+    listar({ rol } = {}) {
+      const sql = `SELECT id, usuario, nombre, correo, rol FROM usuarios WHERE activo = 1
+                   ${rol ? 'AND rol = ?' : ''} ORDER BY nombre`;
+      return rol ? q(sql).all(rol) : q(sql).all();
     },
     contar() {
-      return Number(contarTodas.get().total);
+      return Number(q('SELECT COUNT(*) AS n FROM usuarios').get().n);
     },
+  };
+
+  // -------------------------------------------------------------------
+  // CANDIDATOS
+  // -------------------------------------------------------------------
+  const candidatos = {
+    crear({ nombre, correo, telefono, origen }) {
+      const id = nuevoId();
+      q(`INSERT INTO candidatos (id, nombre, correo, telefono, origen, creado_en)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(id, nombre, correo, telefono, origen, ahoraIso());
+      return id;
+    },
+    /** Actualiza solo los campos que vienen */
+    actualizar(id, campos) {
+      const columnas = { nombre: 'nombre', correo: 'correo', telefono: 'telefono', origen: 'origen' };
+      const sets = [];
+      const valores = [];
+      for (const [campo, columna] of Object.entries(columnas)) {
+        if (Object.hasOwn(campos, campo)) {
+          sets.push(`${columna} = ?`);
+          valores.push(campos[campo]);
+        }
+      }
+      if (sets.length === 0) return Boolean(candidatos.obtener(id));
+      sets.push('actualizado_en = ?');
+      valores.push(ahoraIso(), id);
+      return Number(q(`UPDATE candidatos SET ${sets.join(', ')} WHERE id = ?`).run(...valores).changes) > 0;
+    },
+    obtener(id) {
+      return q('SELECT * FROM candidatos WHERE id = ?').get(id) ?? null;
+    },
+    buscarPorCorreo(correo) {
+      return q('SELECT * FROM candidatos WHERE correo = ?').get(correo) ?? null;
+    },
+    /** Lista con la cantidad de solicitudes y la última etapa de cada candidato */
+    listar({ q: busqueda } = {}) {
+      const base = `
+        SELECT c.*,
+               COUNT(s.id) AS total_solicitudes,
+               MAX(s.fecha_solicitud) AS ultima_solicitud
+          FROM candidatos c
+          LEFT JOIN solicitudes s ON s.candidato_id = c.id`;
+      if (busqueda) {
+        const patron = `%${busqueda.toLowerCase()}%`;
+        return q(`${base}
+          WHERE lower(c.nombre) LIKE ? OR lower(c.correo) LIKE ?
+          GROUP BY c.id ORDER BY c.nombre`).all(patron, patron);
+      }
+      return q(`${base} GROUP BY c.id ORDER BY c.nombre`).all();
+    },
+    /** Archivos de todas sus solicitudes (para borrarlos del disco) */
+    archivos(id) {
+      return q(`SELECT cv_archivo, descriptor_archivo FROM solicitudes WHERE candidato_id = ?`).all(id);
+    },
+    /** Borra al candidato y, en cascada, sus solicitudes, evaluaciones e historial */
+    eliminar(id) {
+      return Number(q('DELETE FROM candidatos WHERE id = ?').run(id).changes) > 0;
+    },
+    contar() {
+      return Number(q('SELECT COUNT(*) AS n FROM candidatos').get().n);
+    },
+  };
+
+  // -------------------------------------------------------------------
+  // SOLICITUDES
+  // -------------------------------------------------------------------
+  const COLUMNAS_SOLICITUD = {
+    evaluadorId: 'evaluador_id',
+    familiaCargo: 'familia_cargo',
+    nombreCargo: 'nombre_cargo',
+    ubicacion: 'ubicacion',
+    unidad: 'unidad',
+    ceco: 'ceco',
+    requiereReferencias: 'requiere_referencias',
+    referido: 'referido',
+    aspectosIndagar: 'aspectos_indagar',
+  };
+  const BOOLEANAS = new Set(['requiereReferencias', 'referido']);
+
+  const solicitudes = {
+    crear(s) {
+      const id = s.id ?? nuevoId();
+      q(`INSERT INTO solicitudes (
+           id, candidato_id, analista_id, evaluador_id, familia_cargo, nombre_cargo, ubicacion,
+           unidad, ceco, requiere_referencias, referido, aspectos_indagar,
+           cv_archivo, cv_nombre_original, cv_bytes, descriptor_archivo, descriptor_nombre_original,
+           etapa, fecha_solicitud
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id,
+        s.candidatoId,
+        s.analistaId,
+        s.evaluadorId ?? null,
+        s.familiaCargo,
+        s.nombreCargo,
+        s.ubicacion,
+        s.unidad,
+        s.ceco ?? '',
+        bit(s.requiereReferencias),
+        bit(s.referido),
+        s.aspectosIndagar ?? '',
+        s.cvArchivo ?? null,
+        s.cvNombreOriginal ?? null,
+        s.cvBytes ?? null,
+        s.descriptorArchivo ?? null,
+        s.descriptorNombreOriginal ?? null,
+        s.etapa ?? 'recibida',
+        s.fechaSolicitud ?? ahoraIso()
+      );
+      return id;
+    },
+    actualizar(id, campos) {
+      const sets = [];
+      const valores = [];
+      for (const [campo, columna] of Object.entries(COLUMNAS_SOLICITUD)) {
+        if (Object.hasOwn(campos, campo)) {
+          sets.push(`${columna} = ?`);
+          valores.push(BOOLEANAS.has(campo) ? bit(campos[campo]) : campos[campo]);
+        }
+      }
+      if (sets.length === 0) return Boolean(solicitudes.obtener(id));
+      sets.push('actualizado_en = ?');
+      valores.push(ahoraIso(), id);
+      return Number(q(`UPDATE solicitudes SET ${sets.join(', ')} WHERE id = ?`).run(...valores).changes) > 0;
+    },
+    cambiarEtapa(id, etapa) {
+      return (
+        Number(q('UPDATE solicitudes SET etapa = ?, actualizado_en = ? WHERE id = ?').run(etapa, ahoraIso(), id).changes) > 0
+      );
+    },
+    obtener(id) {
+      return q(`${SELECT_SOLICITUD} WHERE s.id = ?`).get(id) ?? null;
+    },
+    /**
+     * Filtros opcionales: etapa, familiaCargo, evaluadorId, candidatoId,
+     * desde / hasta (YYYY-MM-DD, sobre la fecha de solicitud) y q (texto libre)
+     */
+    listar(filtros = {}) {
+      const condiciones = [];
+      const valores = [];
+      const filtro = (sql, valor) => {
+        condiciones.push(sql);
+        valores.push(valor);
+      };
+      if (filtros.etapa) filtro('s.etapa = ?', filtros.etapa);
+      if (filtros.familiaCargo) filtro('s.familia_cargo = ?', filtros.familiaCargo);
+      if (filtros.evaluadorId) filtro('s.evaluador_id = ?', filtros.evaluadorId);
+      if (filtros.candidatoId) filtro('s.candidato_id = ?', filtros.candidatoId);
+      if (filtros.desde) filtro('s.fecha_solicitud >= ?', filtros.desde);
+      // "hasta" incluye todo ese día
+      if (filtros.hasta) filtro('s.fecha_solicitud < ?', `${filtros.hasta}T23:59:59.999Z`);
+      if (filtros.q) {
+        const patron = `%${String(filtros.q).toLowerCase()}%`;
+        condiciones.push('(lower(c.nombre) LIKE ? OR lower(s.nombre_cargo) LIKE ? OR lower(c.correo) LIKE ?)');
+        valores.push(patron, patron, patron);
+      }
+      const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+      return q(`${SELECT_SOLICITUD} ${where} ORDER BY s.fecha_solicitud DESC`).all(...valores);
+    },
+    eliminar(id) {
+      return Number(q('DELETE FROM solicitudes WHERE id = ?').run(id).changes) > 0;
+    },
+    contar() {
+      return Number(q('SELECT COUNT(*) AS n FROM solicitudes').get().n);
+    },
+  };
+
+  // -------------------------------------------------------------------
+  // EVALUACIONES (una por solicitud; se crea al guardar por primera vez)
+  // -------------------------------------------------------------------
+  const COLUMNAS_EVALUACION = {
+    fechaEntrevista: 'fecha_entrevista',
+    observaciones: 'observaciones',
+    resultado: 'resultado',
+    fechaInforme: 'fecha_informe',
+  };
+
+  const evaluaciones = {
+    obtenerPorSolicitud(solicitudId) {
+      return q('SELECT * FROM evaluaciones WHERE solicitud_id = ?').get(solicitudId) ?? null;
+    },
+    /** Crea la evaluación si no existe y actualiza solo los campos que vienen */
+    guardar(solicitudId, campos) {
+      if (!evaluaciones.obtenerPorSolicitud(solicitudId)) {
+        q('INSERT INTO evaluaciones (id, solicitud_id, actualizado_en) VALUES (?, ?, ?)').run(
+          nuevoId(), solicitudId, ahoraIso()
+        );
+      }
+      const sets = [];
+      const valores = [];
+      for (const [campo, columna] of Object.entries(COLUMNAS_EVALUACION)) {
+        if (Object.hasOwn(campos, campo)) {
+          sets.push(`${columna} = ?`);
+          valores.push(campos[campo]);
+        }
+      }
+      if (sets.length) {
+        sets.push('actualizado_en = ?');
+        valores.push(ahoraIso(), solicitudId);
+        q(`UPDATE evaluaciones SET ${sets.join(', ')} WHERE solicitud_id = ?`).run(...valores);
+      }
+      return evaluaciones.obtenerPorSolicitud(solicitudId);
+    },
+  };
+
+  // -------------------------------------------------------------------
+  // HISTORIAL (trazabilidad: quién hizo qué y cuándo)
+  // -------------------------------------------------------------------
+  const historial = {
+    registrar(solicitudId, usuarioId, accion, detalle = '') {
+      q(`INSERT INTO historial (id, solicitud_id, usuario_id, accion, detalle, creado_en)
+         VALUES (?, ?, ?, ?, ?, ?)`).run(nuevoId(), solicitudId, usuarioId ?? null, accion, detalle, ahoraIso());
+    },
+    listar(solicitudId) {
+      return q(`SELECT h.*, u.nombre AS usuario_nombre
+                  FROM historial h LEFT JOIN usuarios u ON u.id = h.usuario_id
+                 WHERE h.solicitud_id = ?
+                 ORDER BY h.creado_en DESC, h.rowid DESC`).all(solicitudId);
+    },
+  };
+
+  return {
+    usuarios,
+    candidatos,
+    solicitudes,
+    evaluaciones,
+    historial,
+    transaccion,
     cerrar() {
       db.close();
     },
