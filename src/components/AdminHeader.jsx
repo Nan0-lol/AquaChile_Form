@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FaSignOutAlt, FaExternalLinkAlt, FaMoon, FaSun } from 'react-icons/fa';
-import { obtenerUsuario, cerrarSesion } from '../auth';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { FaSignOutAlt, FaMoon, FaSun, FaChartPie, FaPlusCircle } from 'react-icons/fa';
+import { obtenerUsuario, cerrarSesion, puede, NOMBRES_ROL } from '../auth';
 import './AdminHeader.css';
 
 const iniciales = (nombre = '') =>
@@ -12,11 +12,20 @@ const iniciales = (nombre = '') =>
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('') || '?';
 
-// Barra superior del panel de administración: logo, sección, cambio de tema y menú de usuario.
+// Secciones del panel. Cada rol ve solo las que su permiso le deja usar.
+const SECCIONES = [
+  { ruta: '/dashboard', texto: 'Panel', Icono: FaChartPie, permiso: 'indicadores:ver' },
+  { ruta: '/solicitudes/nueva', texto: 'Nueva solicitud', Icono: FaPlusCircle, permiso: 'solicitud:crear' },
+];
+
+// Barra superior del panel: logo, secciones, cambio de tema y menú de usuario.
 const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
   const navigate = useNavigate();
   const [menuAbierto, setMenuAbierto] = useState(false);
-  const usuario = obtenerUsuario() || 'Administrador';
+  const usuario = obtenerUsuario();
+  const nombre = usuario?.nombre || 'Usuario';
+  const rol = NOMBRES_ROL[usuario?.rol] || 'Reclutamiento AquaChile';
+  const secciones = SECCIONES.filter((s) => puede(s.permiso));
 
   // Cerrar el menú con Escape
   useEffect(() => {
@@ -36,14 +45,25 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
       <div className="db-header-left">
         <img src="/logo.png" alt="AquaChile" className="db-logo" />
         <span className="db-header-divider" aria-hidden="true"></span>
-        <span className="db-header-section">Panel de Reclutamiento</span>
+        <span className="db-header-section">Evaluaciones Psicolaborales</span>
       </div>
 
-      <div className="db-header-right">
-        <a href="/formulario" target="_blank" rel="noopener noreferrer" className="db-header-link">
-          Ver formulario público <FaExternalLinkAlt aria-hidden="true" />
-        </a>
+      {secciones.length > 0 && (
+        <nav className="db-nav" aria-label="Secciones del panel">
+          {secciones.map(({ ruta, texto, Icono }) => (
+            <NavLink
+              key={ruta}
+              to={ruta}
+              className={({ isActive }) => `db-nav-link${isActive ? ' is-active' : ''}`}
+            >
+              <Icono aria-hidden="true" />
+              <span className="db-nav-text">{texto}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
 
+      <div className="db-header-right">
         {onAlternarTema && (
           <button
             type="button"
@@ -63,17 +83,18 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
             onClick={() => setMenuAbierto((v) => !v)}
             aria-expanded={menuAbierto}
             aria-haspopup="menu"
+            aria-label={`${nombre}, ${rol}. Abrir menú de usuario`}
           >
-            <span className="db-avatar--light">{iniciales(usuario)}</span>
-            <span className="db-user-name">{usuario}</span>
+            <span className="db-avatar--light" aria-hidden="true">{iniciales(nombre)}</span>
+            <span className="db-user-name" aria-hidden="true">{nombre}</span>
           </button>
           {menuAbierto && (
             <>
               <div className="db-menu-backdrop" onClick={() => setMenuAbierto(false)} />
               <div className="db-user-menu" role="menu">
                 <div className="db-user-menu-head">
-                  <strong>{usuario}</strong>
-                  <span>Reclutamiento AquaChile</span>
+                  <strong>{nombre}</strong>
+                  <span>{rol}</span>
                 </div>
                 <button type="button" role="menuitem" onClick={salir}>
                   <FaSignOutAlt aria-hidden="true" /> Cerrar sesión

@@ -124,3 +124,41 @@ body.db-body-dark {
 .db-page-content {
   flex: 1;
 }
+
+/* ---------- Aviso cuando el rol no tiene permiso para una página ---------- */
+.db-sin-permiso {
+  max-width: 520px;
+  margin: 80px auto;
+  padding: 32px;
+  text-align: center;
+  background: var(--db-surface);
+  border: 1px solid var(--db-border);
+  border-radius: 14px;
+}
+
+.db-sin-permiso h1 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  color: var(--db-heading);
+}
+
+.db-sin-permiso p {
+  margin: 0 0 20px;
+  color: var(--db-muted);
+}
+
+.db-sin-permiso-link {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 18px;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  background: var(--db-accent-solid);
+  border-radius: 8px;
+}
+
+.db-sin-permiso-link:hover {
+  background: var(--db-accent-hover);
+}

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { FaFacebookF, FaInstagram } from 'react-icons/fa';
 import { FaXTwitter } from 'react-icons/fa6';
 import './Footer.css';
@@ -17,7 +16,7 @@ const REDES_SOCIALES = [
   { nombre: 'X', url: 'https://x.com/aqua_chile', Icono: FaXTwitter },
 ];
 
-// Footer corporativo: lo usan todas las páginas públicas a través de PublicLayout
+// Footer corporativo: aparece en la página de inicio de sesión (PublicLayout)
 const Footer = () => (
   <footer className="aquachile-footer">
     <div className="footer-content">
@@ -41,7 +40,6 @@ const Footer = () => (
     <div className="footer-bottom">
       <div className="footer-bottom-left">
         <span>© {new Date().getFullYear()} AquaChile. Todos los derechos reservados.</span>
-        <Link to="/login" className="footer-admin-link">Acceso administradores</Link>
       </div>
       <div className="footer-social">
         <span className="footer-social-label">Encuéntranos</span>

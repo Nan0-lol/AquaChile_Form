@@ -66,6 +66,57 @@
   outline: none;
 }
 
+
+/* ---------- Secciones del panel ---------- */
+.db-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  margin-left: 12px;
+}
+
+.db-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.db-nav-link svg {
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.db-nav-link:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.db-nav-link:focus-visible {
+  outline: 2px solid var(--color-accent-on-dark, #7dd3fc);
+  outline-offset: 2px;
+}
+
+.db-nav-link.is-active {
+  color: #ffffff;
+  font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.db-nav-link.is-active svg {
+  color: var(--color-accent-on-dark, #7dd3fc);
+  opacity: 1;
+}
+
 /* ---------- Botón de tema (claro / oscuro) ---------- */
 .db-theme-btn {
   width: 38px;
@@ -203,9 +254,31 @@
   background-color: #ffffff;
 }
 
-@media (max-width: 900px) {
-  .db-header-link {
+@media (max-width: 1024px) {
+  .db-header-section {
     display: none;
+  }
+  .db-header-divider {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .db-nav-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .db-nav-link {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .db-nav-link svg {
+    font-size: 16px;
   }
 }
 

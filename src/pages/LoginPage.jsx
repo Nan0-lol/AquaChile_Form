@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { haySesion, iniciarSesion } from '../auth';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { haySesion, iniciarSesion, rutaInicio } from '../auth';
 import './LoginPage.css';
 
 const IconoOjo = ({ tachado }) => (
@@ -52,10 +52,18 @@ const LoginPage = () => {
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [cargando, setCargando] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  // Si llegó aquí porque la sesión venció, se le explica
+  const sesionExpirada = Boolean(location.state?.expirada);
+  // Si intentó abrir una página del panel sin sesión, vuelve a esa página al entrar
+  const destino = (sesion) => {
+    const desde = location.state?.desde;
+    return desde && desde !== '/login' ? desde : sesion;
+  };
 
   // Si ya hay sesión, no tiene sentido mostrar el login
   if (haySesion()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={rutaInicio()} replace />;
   }
 
   const handleChange = (e) => {
@@ -80,7 +88,7 @@ const LoginPage = () => {
     try {
       const { ok, mensaje } = await iniciarSesion(usuario, password);
       if (ok) {
-        navigate('/dashboard', { replace: true });
+        navigate(destino(rutaInicio()), { replace: true });
       } else {
         setError(mensaje || 'Usuario o contraseña incorrectos.');
       }
@@ -103,10 +111,16 @@ const LoginPage = () => {
           <div className="login-icon">
             <IconoCandado />
           </div>
-          <h1>Panel de administración</h1>
+          <h1>Evaluaciones Psicolaborales</h1>
           <p className="login-subtitle">
-            Acceso exclusivo para el equipo de Reclutamiento.
+            Acceso exclusivo para el equipo de Reclutamiento y Selección.
           </p>
+
+          {sesionExpirada && !hayError && (
+            <p className="login-aviso" role="status">
+              Tu sesión expiró. Vuelve a ingresar para continuar.
+            </p>
+          )}
 
           <form onSubmit={handleSubmit} noValidate>
             <div className="login-field">
@@ -173,9 +187,6 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <Link to="/formulario" className="login-back">
-          ← Volver al formulario de postulación
-        </Link>
       </div>
     </main>
   );

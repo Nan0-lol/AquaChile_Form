@@ -15,7 +15,7 @@ const REGEX_CELULAR = /^(\+?56)?\s?9\s?\d{4}\s?\d{4}$/;
 const REGEX_CONTROL = /[\u0000-\u001F\u007F]/;
 // Igual, pero permite saltos de línea (para textos largos)
 const REGEX_CONTROL_MULTILINEA = /[\u0000-\u0009\u000B\u000C\u000E-\u001F\u007F]/;
-// Centro de costo: letras y números (ej. A170010301)
+// Centro de costo: letras y números (ej. CC-1050)
 const REGEX_CECO = /^[A-Z0-9-]{1,20}$/;
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const REGEX_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;

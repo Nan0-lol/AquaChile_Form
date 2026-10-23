@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
+import { verificarSesion } from '../auth';
+import { EVENTO_SESION_EXPIRADA } from '../services/api';
 import './AdminLayout.css';
 
 const CLAVE_TEMA = 'aquachile_tema';
@@ -17,11 +19,14 @@ const temaInicial = () => {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-// Esqueleto del panel de administración:
+// Esqueleto del panel:
 //   AdminHeader arriba y la página del panel debajo (<Outlet />).
-// El tema (claro/oscuro) vive aquí, así todas las páginas del panel lo comparten.
+// Aquí vive el tema (claro/oscuro) y el control de la sesión, así todas
+// las páginas del panel lo comparten.
 const AdminLayout = () => {
+  const navigate = useNavigate();
   const [tema, setTema] = useState(temaInicial);
+  const [, setSesionRevisada] = useState(false);
 
   useEffect(() => {
     try {
@@ -33,6 +38,17 @@ const AdminLayout = () => {
     document.body.classList.toggle('db-body-dark', tema === 'dark');
     return () => document.body.classList.remove('db-body-dark');
   }, [tema]);
+
+  // Si la sesión expira (o el servidor se reinició), se vuelve al login con un aviso
+  useEffect(() => {
+    const alExpirar = () => navigate('/login', { replace: true, state: { expirada: true } });
+    window.addEventListener(EVENTO_SESION_EXPIRADA, alExpirar);
+    verificarSesion().then((viva) => {
+      if (!viva) alExpirar();
+      else setSesionRevisada(true); // vuelve a dibujar el menú con el rol actualizado
+    });
+    return () => window.removeEventListener(EVENTO_SESION_EXPIRADA, alExpirar);
+  }, [navigate]);
 
   const alternarTema = () => setTema((t) => (t === 'dark' ? 'light' : 'dark'));
 
