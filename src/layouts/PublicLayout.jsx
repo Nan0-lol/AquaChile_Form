@@ -2,14 +2,14 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
-import './PublicLayout.css';
 
-// Esqueleto de las páginas públicas (formulario y login):
+// Esqueleto de la página pública (inicio de sesión):
 //   NavBar arriba, la página en el medio (<Outlet />) y Footer abajo.
+// El footer siempre queda abajo, aunque la página sea corta.
 const PublicLayout = () => (
-  <div className="public-layout">
+  <div className="flex min-h-screen flex-col">
     <NavBar />
-    <main className="public-layout-content">
+    <main className="flex flex-1 flex-col [&>*]:flex-1">
       <Outlet />
     </main>
     <Footer />

@@ -93,9 +93,11 @@ export const validarSolicitudCompleta = (valores, { candidatoExistente = null, c
 /**
  * Arma el FormData con los nombres que espera POST /api/solicitudes.
  * Si se eligió un candidato ya registrado, solo se manda su id.
+ * Si viene de una postulación web, se manda su id; sin cv nuevo, el servidor usa el de la postulación.
  */
-export const construirFormData = (valores, { candidatoExistente = null, cv, descriptor = null }) => {
+export const construirFormData = (valores, { candidatoExistente = null, cv, descriptor = null, postulacionId = null }) => {
   const datos = new FormData();
+  if (postulacionId) datos.append('postulacionId', postulacionId);
   if (candidatoExistente) {
     datos.append('candidatoId', candidatoExistente.id);
   } else {
@@ -114,7 +116,7 @@ export const construirFormData = (valores, { candidatoExistente = null, cv, desc
   datos.append('referido', valores.referido ? 'true' : 'false');
   datos.append('aspectosIndagar', valores.aspectosIndagar.trim());
   // Los archivos van al final: así el servidor ya conoce los datos al recibirlos
-  datos.append('cv', cv);
+  if (cv) datos.append('cv', cv);
   if (descriptor) datos.append('descriptor', descriptor);
   return datos;
 };

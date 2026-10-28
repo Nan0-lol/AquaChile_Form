@@ -9,9 +9,10 @@ import DetalleSolicitud from './pages/DetalleSolicitud';
 import Candidatos from './pages/Candidatos';
 import DetalleCandidato from './pages/DetalleCandidato';
 import NuevoCandidato from './pages/NuevoCandidato';
+import Postular from './pages/Postular';
+import Postulaciones from './pages/Postulaciones';
 import RutaProtegida from './RutaProtegida';
 import { haySesion, rutaInicio } from './auth';
-import './App.css'; // colores y estilos globales
 
 // La raíz lleva a la pantalla de inicio (o al login si no hay sesión)
 const Inicio = () => <Navigate to={haySesion() ? rutaInicio() : '/login'} replace />;
@@ -23,8 +24,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Única página pública: el login. El sistema es solo para el equipo. */}
+        {/* Páginas públicas:
+            - /postular: formulario para postular (solo ENVÍA datos, no muestra nada del sistema)
+            - /login: entrada del equipo de Reclutamiento */}
         <Route element={<PublicLayout />}>
+          <Route path="/postular" element={<Postular />} />
           <Route path="/login" element={<LoginPage />} />
         </Route>
 
@@ -37,6 +41,7 @@ function App() {
           }
         >
           <Route path="/dashboard" element={conPermiso('indicadores:ver', <Dashboard />)} />
+          <Route path="/postulaciones" element={conPermiso('postulacion:ver', <Postulaciones />)} />
           <Route path="/solicitudes" element={conPermiso('solicitud:ver', <Solicitudes />)} />
           <Route path="/solicitudes/nueva" element={conPermiso('solicitud:crear', <NuevaSolicitud />)} />
           <Route path="/solicitudes/:id" element={conPermiso('solicitud:ver', <DetalleSolicitud />)} />

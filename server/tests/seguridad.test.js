@@ -138,7 +138,13 @@ describe('Permisos por rol', () => {
   });
 
   test('jefatura solo consulta', () => {
-    expect(permisosDe('jefatura').sort()).toEqual(['candidato:ver', 'indicadores:ver', 'solicitud:ver']);
+    expect(permisosDe('jefatura').sort()).toEqual(['candidato:ver', 'indicadores:ver', 'postulacion:ver', 'solicitud:ver']);
+  });
+
+  test('las postulaciones web las gestiona el analista; el evaluador no las ve', () => {
+    expect(puede('analista', 'postulacion:gestionar')).toBe(true);
+    expect(puede('jefatura', 'postulacion:gestionar')).toBe(false);
+    expect(puede('evaluador', 'postulacion:ver')).toBe(false);
   });
 
   test('solo el administrador borra candidatos; un rol desconocido no puede nada', () => {

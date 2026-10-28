@@ -62,6 +62,21 @@ export const RESULTADOS = {
   no_recomendado: 'No recomendado',
 };
 
+// Áreas de interés del formulario público (las mismas del formulario original)
+export const AREAS_INTERES = {
+  planta: 'Plantas de Proceso',
+  piscicultura: 'Pisciculturas',
+  administracion: 'Administración y Finanzas',
+  comercial: 'Área Comercial',
+};
+
+// Estados de lo que llega por el formulario público
+export const ESTADOS_POSTULACION = {
+  nueva: 'Por revisar',
+  en_evaluacion: 'En evaluación',
+  descartada: 'Descartada',
+};
+
 /** Todo junto, tal como lo entrega GET /api/catalogos */
 export const catalogos = () => ({
   roles: ROLES,
@@ -72,6 +87,13 @@ export const catalogos = () => ({
   etapas: ETAPAS,
   ordenEtapas: ORDEN_ETAPAS,
   resultados: RESULTADOS,
+  estadosPostulacion: ESTADOS_POSTULACION,
+  areasInteres: AREAS_INTERES,
+});
+
+/** Lo único que necesita ver el formulario público (sin datos internos) */
+export const opcionesPublicas = () => ({
+  areas: AREAS_INTERES,
 });
 
 /** true si `valor` es una de las claves del catálogo (evita claves como "toString") */

@@ -3,6 +3,7 @@
 import { Router } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { permitir } from '../seguridad.js';
 import { validarArchivo } from '../validaciones.js';
 import { manejar, borrarArchivos } from './utilidades.js';
@@ -16,6 +17,8 @@ import {
   eliminarSolicitud,
   archivoDeSolicitud,
 } from '../servicios/solicitudes.js';
+import { postulacionParaEvaluar } from '../servicios/postulaciones.js';
+import { ErrorServicio } from '../servicios/errores.js';
 
 export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, limitarEnvios }) {
   const router = Router();
@@ -31,6 +34,24 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
     res.json(obtenerSolicitud(repo, req.params.id));
   }));
 
+  /**
+   * Si la solicitud viene de una postulación y el analista no subió otro CV,
+   * se usa una COPIA del CV de la postulación (así borrar una no borra la otra).
+   */
+  const copiarCvDePostulacion = async (postulacionId) => {
+    const fila = postulacionParaEvaluar(repo, postulacionId);
+    const origen = path.join(carpetaArchivos, path.basename(fila.cv_archivo));
+    const filename = `${crypto.randomUUID()}${path.extname(fila.cv_archivo).toLowerCase()}`;
+    try {
+      await fs.promises.copyFile(origen, path.join(carpetaArchivos, filename));
+    } catch {
+      throw new ErrorServicio(404, 'El CV de la postulación ya no existe en el servidor. Adjunta uno nuevo.', {
+        errores: { cv: 'Adjunta el CV del candidato (PDF o DOCX).' },
+      });
+    }
+    return { filename, originalname: fila.cv_nombre_original, size: fila.cv_bytes, copiado: true };
+  };
+
   // Formulario del analista: datos + CV (obligatorio) + descriptor del cargo (opcional)
   router.post(
     '/',
@@ -41,9 +62,10 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
       { name: 'descriptor', maxCount: 1 },
     ]),
     manejar(async (req, res) => {
-      const cv = req.files?.cv?.[0] ?? null;
+      let cv = req.files?.cv?.[0] ?? null;
       const descriptor = req.files?.descriptor?.[0] ?? null;
       const subidos = [cv, descriptor].filter(Boolean);
+      const postulacionId = typeof req.body?.postulacionId === 'string' ? req.body.postulacionId.trim() : '';
 
       try {
         // El contenido real de cada archivo debe coincidir con su formato
@@ -56,6 +78,10 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
         if (Object.keys(errores).length) {
           await borrarArchivos(carpetaArchivos, subidos.map((a) => a.filename));
           return res.status(400).json({ ok: false, mensaje: 'Revisa los archivos adjuntos.', errores });
+        }
+        if (!cv && postulacionId) {
+          cv = await copiarCvDePostulacion(postulacionId);
+          subidos.push(cv);
         }
 
         const solicitud = crearSolicitud(repo, req.usuario, req.body || {}, { cv, descriptor });

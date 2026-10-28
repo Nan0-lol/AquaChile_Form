@@ -56,11 +56,17 @@ describe('Datos ficticios de la demo', () => {
 
   test('todos los correos son ficticios (@ejemplo.cl)', () => {
     expect(repo.candidatos.listar().every((c) => c.correo.endsWith('@ejemplo.cl'))).toBe(true);
+    expect(repo.postulaciones.listar().every((p) => p.correo.endsWith('@ejemplo.cl'))).toBe(true);
+  });
+
+  test('incluye postulaciones web por revisar y una descartada', () => {
+    expect(repo.postulaciones.contar()).toBe(4);
+    expect(calcularIndicadores(repo).postulacionesPorRevisar).toBe(3);
   });
 
   test('los CV de ejemplo son PDF válidos que el propio sistema acepta', async () => {
     const archivos = fs.readdirSync(carpeta);
-    expect(archivos).toHaveLength(12);
+    expect(archivos).toHaveLength(16); // 12 de solicitudes + 4 de postulaciones
     expect(await validarArchivo(path.join(carpeta, archivos[0]), '.pdf')).toBe(null);
     expect(crearPdfSimple('Prueba', ['línea con tilde (y paréntesis)']).subarray(0, 5).toString()).toBe('%PDF-');
   });

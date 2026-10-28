@@ -16,6 +16,7 @@ import {
 import { ETAPAS, ORDEN_ETAPAS, FAMILIAS_CARGO, RESULTADOS, esClave } from '../modelos/catalogos.js';
 import { aSolicitud, aHistorial } from './formato.js';
 import { ErrorServicio, noEncontrado, datosInvalidos, reglaNegocio } from './errores.js';
+import { postulacionParaEvaluar } from './postulaciones.js';
 
 const SOLICITUD = 'La solicitud';
 const REGEX_FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -99,9 +100,14 @@ export function obtenerSolicitud(repo, id) {
  *
  * El candidato puede ser uno ya registrado (body.candidatoId) o uno nuevo
  * (body.nombre, body.correo, body.telefono, body.origen).
+ *
+ * Si viene body.postulacionId, la solicitud nace de una postulación del
+ * formulario público: esa postulación queda "En evaluación".
  */
 export function crearSolicitud(repo, usuario, body = {}, archivos = {}) {
   const errores = {};
+  const postulacionId = typeof body.postulacionId === 'string' ? body.postulacionId.trim() : '';
+  if (postulacionId) postulacionParaEvaluar(repo, postulacionId); // lanza error si ya no corresponde
   let candidatoId = typeof body.candidatoId === 'string' ? body.candidatoId.trim() : '';
   let datosCandidato = null;
 
@@ -140,12 +146,14 @@ export function crearSolicitud(repo, usuario, body = {}, archivos = {}) {
       descriptorArchivo: archivos.descriptor?.filename ?? null,
       descriptorNombreOriginal: archivos.descriptor?.originalname ?? null,
     });
-    repo.historial.registrar(
-      nuevaId,
-      usuario.id,
-      'Solicitud creada',
-      datosCandidato ? 'Con candidato nuevo' : 'Con candidato ya registrado'
-    );
+    const detalle = [
+      datosCandidato ? 'Con candidato nuevo' : 'Con candidato ya registrado',
+      postulacionId && 'desde una postulación web',
+    ]
+      .filter(Boolean)
+      .join(', ');
+    repo.historial.registrar(nuevaId, usuario.id, 'Solicitud creada', detalle);
+    if (postulacionId) repo.postulaciones.cambiarEstado(postulacionId, 'en_evaluacion', usuario.id, nuevaId);
     return nuevaId;
   });
 

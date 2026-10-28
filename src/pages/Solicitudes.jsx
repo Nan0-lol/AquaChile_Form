@@ -8,12 +8,25 @@ import {
   contarPorEtapa,
   formatearFecha,
   hace,
-  iniciales,
   construirCsvSolicitudes,
 } from '../utils/proceso';
 import { puede, obtenerUsuario } from '../auth';
-import { EtapaBadge, Cargando, ErrorCarga, Vacio } from '../components/Proceso';
-import './NuevaSolicitud.css'; // botones, campos y tarjetas (ns-*)
+import { EtapaBadge } from '../components/Proceso';
+import {
+  cx,
+  FOCO,
+  Boton,
+  Selector,
+  Avatar,
+  Pagina,
+  Titulo,
+  Cargando,
+  ErrorCarga,
+  Vacio,
+  SinDato,
+  claseEntrada,
+  claseTarjeta,
+} from '../components/ui';
 
 const FILTROS_INICIALES = { etapa: '', familiaCargo: '', responsable: '', q: '', desde: '', hasta: '' };
 const CLAVE_FILTROS = 'aquachile_filtros_solicitudes';
@@ -37,6 +50,9 @@ const descargar = (contenido, nombre) => {
   enlace.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
+
+const ETIQUETA_FILTRO = 'mb-[5px] block text-xs font-semibold text-tenue';
+const ENLACE_FILA = 'font-semibold text-texto no-underline hover:text-acento hover:underline rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento';
 
 const Solicitudes = () => {
   const navigate = useNavigate();
@@ -88,39 +104,48 @@ const Solicitudes = () => {
     descargar(construirCsvSolicitudes(visibles, catalogos), `solicitudes-${new Date().toLocaleDateString('sv-SE')}.csv`);
   };
 
-  if (carga === 'cargando') return <main className="pr-main"><Cargando texto="Cargando solicitudes…" /></main>;
-  if (carga === 'error') return <main className="pr-main"><ErrorCarga mensaje={error} onReintentar={cargar} /></main>;
+  if (carga === 'cargando') return <Pagina><Cargando texto="Cargando solicitudes…" /></Pagina>;
+  if (carga === 'error') return <Pagina><ErrorCarga mensaje={error} onReintentar={cargar} /></Pagina>;
 
   const enProceso = conteo.agendada + conteo.realizada;
+  const familia = (s) => catalogos.familiasCargo[s.familiaCargo] ?? s.familiaCargo;
+  const origen = (s) => catalogos.origenes[s.candidato.origen] ?? s.candidato.origen;
+  const timing = (s) =>
+    s.timingDias !== null && (
+      <span className="mt-0.5 block text-[12.5px] text-tenue">
+        {s.timingDias} {s.timingDias === 1 ? 'día' : 'días'} de proceso
+      </span>
+    );
 
   return (
-    <main className="pr-main">
-      <div className="pr-titlebar">
-        <div>
-          <h1>Solicitudes de evaluación</h1>
-          <p>
-            {solicitudes.length} en total · {enProceso} en proceso · {conteo.recibida}{' '}
-            {conteo.recibida === 1 ? 'pendiente' : 'pendientes'} de agendar
-          </p>
-        </div>
-        <div className="pr-titlebar-actions">
-          <button type="button" className="ns-btn ns-btn--outline" onClick={exportar} disabled={!visibles.length}>
-            <FaFileExcel aria-hidden="true" /> Exportar a Excel
-          </button>
-          {puede('solicitud:crear') && (
-            <Link to="/solicitudes/nueva" className="ns-btn ns-btn--primary">
-              <FaPlus aria-hidden="true" /> Nueva solicitud
-            </Link>
-          )}
-        </div>
-      </div>
+    <Pagina>
+      <Titulo
+        titulo="Solicitudes de evaluación"
+        acciones={
+          <>
+            <Boton variante="contorno" onClick={exportar} disabled={!visibles.length}>
+              <FaFileExcel aria-hidden="true" /> Exportar a Excel
+            </Boton>
+            {puede('solicitud:crear') && (
+              <Boton as={Link} to="/solicitudes/nueva">
+                <FaPlus aria-hidden="true" /> Nueva solicitud
+              </Boton>
+            )}
+          </>
+        }
+      >
+        {solicitudes.length} en total · {enProceso} en proceso · {conteo.recibida}{' '}
+        {conteo.recibida === 1 ? 'pendiente' : 'pendientes'} de agendar
+      </Titulo>
 
-      <section className="ns-card pr-lista" aria-label="Listado de solicitudes">
+      <section className={cx(claseTarjeta, 'overflow-hidden')} aria-label="Listado de solicitudes">
         {/* ---------- Filtros ---------- */}
-        <div className="pr-filtros">
-          <div className="ns-search pr-filtro-q">
-            <FaSearch aria-hidden="true" />
-            <label htmlFor="filtro-q" className="visually-hidden">Buscar</label>
+        <div className="grid grid-cols-2 items-end gap-3 px-3.5 pt-3.5 sm:px-5 sm:pt-[18px] lg:grid-cols-[minmax(0,1fr)_190px_190px_160px_160px]">
+          <div className="col-span-2 flex h-11 items-center gap-2.5 rounded-lg border border-borde-fuerte bg-superficie px-3 transition-[border-color,box-shadow] focus-within:border-acento focus-within:ring-3 focus-within:ring-anillo lg:col-span-1">
+            <FaSearch aria-hidden="true" className="shrink-0 text-sutil" />
+            <label htmlFor="filtro-q" className="sr-only">
+              Buscar
+            </label>
             <input
               id="filtro-q"
               type="search"
@@ -128,148 +153,229 @@ const Solicitudes = () => {
               onChange={(e) => cambiar('q', e.target.value)}
               placeholder="Buscar candidato, cargo o ubicación"
               autoComplete="off"
+              className="h-full min-w-0 flex-1 border-0 bg-transparent text-[14.5px] text-texto outline-none placeholder:text-sutil"
             />
           </div>
 
-          <div className="ns-field pr-filtro">
-            <label htmlFor="filtro-familia" className="pr-filtro-label">Familia</label>
-            <select id="filtro-familia" value={filtros.familiaCargo} onChange={(e) => cambiar('familiaCargo', e.target.value)}>
+          <div>
+            <label htmlFor="filtro-familia" className={ETIQUETA_FILTRO}>
+              Familia
+            </label>
+            <Selector id="filtro-familia" value={filtros.familiaCargo} onChange={(e) => cambiar('familiaCargo', e.target.value)} alto="h-11">
               <option value="">Todas</option>
               {Object.entries(catalogos.familiasCargo).map(([clave, texto]) => (
-                <option key={clave} value={clave}>{texto}</option>
+                <option key={clave} value={clave}>
+                  {texto}
+                </option>
               ))}
-            </select>
+            </Selector>
           </div>
 
-          <div className="ns-field pr-filtro">
-            <label htmlFor="filtro-responsable" className="pr-filtro-label">Responsable</label>
-            <select id="filtro-responsable" value={filtros.responsable} onChange={(e) => cambiar('responsable', e.target.value)}>
+          <div>
+            <label htmlFor="filtro-responsable" className={ETIQUETA_FILTRO}>
+              Responsable
+            </label>
+            <Selector id="filtro-responsable" value={filtros.responsable} onChange={(e) => cambiar('responsable', e.target.value)} alto="h-11">
               <option value="">Todos</option>
               <option value="sin">Sin asignar</option>
               {evaluadores.map((ev) => (
-                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                <option key={ev.id} value={ev.id}>
+                  {ev.nombre}
+                </option>
               ))}
-            </select>
+            </Selector>
           </div>
 
-          <div className="ns-field pr-filtro pr-filtro--fecha">
-            <label htmlFor="filtro-desde" className="pr-filtro-label">Desde</label>
-            <input id="filtro-desde" type="date" value={filtros.desde} max={filtros.hasta || undefined} onChange={(e) => cambiar('desde', e.target.value)} />
+          <div>
+            <label htmlFor="filtro-desde" className={ETIQUETA_FILTRO}>
+              Desde
+            </label>
+            <input
+              id="filtro-desde"
+              type="date"
+              value={filtros.desde}
+              max={filtros.hasta || undefined}
+              onChange={(e) => cambiar('desde', e.target.value)}
+              className={claseEntrada(false, 'h-11 px-2.5 text-sm')}
+            />
           </div>
 
-          <div className="ns-field pr-filtro pr-filtro--fecha">
-            <label htmlFor="filtro-hasta" className="pr-filtro-label">Hasta</label>
-            <input id="filtro-hasta" type="date" value={filtros.hasta} min={filtros.desde || undefined} onChange={(e) => cambiar('hasta', e.target.value)} />
+          <div>
+            <label htmlFor="filtro-hasta" className={ETIQUETA_FILTRO}>
+              Hasta
+            </label>
+            <input
+              id="filtro-hasta"
+              type="date"
+              value={filtros.hasta}
+              min={filtros.desde || undefined}
+              onChange={(e) => cambiar('hasta', e.target.value)}
+              className={claseEntrada(false, 'h-11 px-2.5 text-sm')}
+            />
           </div>
         </div>
 
         {(esEvaluador || hayFiltros) && (
-          <div className="pr-filtros-extra">
+          <div className="flex flex-wrap items-center gap-3 px-3.5 pt-3 sm:px-5">
             {esEvaluador && (
               <button
                 type="button"
-                className={`pr-chip${filtros.responsable === usuario.id ? ' is-active' : ''}`}
                 aria-pressed={filtros.responsable === usuario.id}
                 onClick={() => cambiar('responsable', filtros.responsable === usuario.id ? '' : usuario.id)}
+                className={cx(
+                  'inline-flex h-8 cursor-pointer items-center gap-[7px] rounded-full border px-3 text-[13px] font-semibold transition-colors',
+                  FOCO,
+                  filtros.responsable === usuario.id
+                    ? 'border-acento bg-acento-suave text-acento'
+                    : 'border-borde-fuerte bg-superficie text-tenue hover:border-acento hover:text-texto'
+                )}
               >
                 <FaUserCheck aria-hidden="true" /> Asignadas a mí
               </button>
             )}
             {hayFiltros && (
-              <button type="button" className="pr-link-btn" onClick={limpiar}>
+              <button
+                type="button"
+                onClick={limpiar}
+                className={cx('inline-flex cursor-pointer items-center gap-1.5 rounded px-0.5 py-1 text-[13px] font-semibold text-acento hover:underline', FOCO)}
+              >
                 <FaTimes aria-hidden="true" /> Limpiar filtros
               </button>
             )}
           </div>
         )}
 
-        {/* ---------- Pestañas por etapa ---------- */}
-        <div className="pr-tabs" role="group" aria-label="Filtrar por etapa">
-          {['', ...ORDEN_ETAPAS].map((etapa) => (
-            <button
-              key={etapa || 'todas'}
-              type="button"
-              className={`pr-tab${filtros.etapa === etapa ? ' is-active' : ''}`}
-              aria-pressed={filtros.etapa === etapa}
-              onClick={() => cambiar('etapa', etapa)}
-            >
-              {etapa ? catalogos.etapas[etapa] : 'Todas'}
-              <span className="pr-tab-count">{etapa ? conteo[etapa] : conteo.todas}</span>
-            </button>
-          ))}
+        {/* ---------- Pestañas por etapa (se deslizan en pantallas chicas) ---------- */}
+        <div role="group" aria-label="Filtrar por etapa" className="mt-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-borde px-3.5 [scrollbar-width:thin]">
+          {['', ...ORDEN_ETAPAS].map((etapa) => {
+            const activa = filtros.etapa === etapa;
+            return (
+              <button
+                key={etapa || 'todas'}
+                type="button"
+                aria-pressed={activa}
+                onClick={() => cambiar('etapa', etapa)}
+                className={cx(
+                  '-mb-px inline-flex cursor-pointer items-center gap-2 border-b-2 px-2.5 py-3 text-sm font-semibold whitespace-nowrap',
+                  'outline-none focus-visible:ring-3 focus-visible:ring-anillo',
+                  activa ? 'border-acento text-acento' : 'border-transparent text-tenue hover:text-texto'
+                )}
+              >
+                {etapa ? catalogos.etapas[etapa] : 'Todas'}
+                <span
+                  className={cx(
+                    'min-w-[22px] rounded-full px-[7px] py-px text-center text-xs',
+                    activa ? 'bg-acento-suave text-acento' : 'bg-superficie-3 text-tenue'
+                  )}
+                >
+                  {etapa ? conteo[etapa] : conteo.todas}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* ---------- Tabla ---------- */}
         {visibles.length === 0 ? (
           <Vacio
             titulo={solicitudes.length ? 'No hay solicitudes con estos filtros' : 'Todavía no hay solicitudes'}
             texto={solicitudes.length ? 'Prueba quitando algún filtro.' : 'Cuando el analista cree una, aparecerá aquí.'}
           >
             {hayFiltros && (
-              <button type="button" className="ns-btn ns-btn--outline ns-btn--sm" onClick={limpiar}>
+              <Boton variante="contorno" tamano="sm" onClick={limpiar}>
                 Limpiar filtros
-              </button>
+              </Boton>
             )}
           </Vacio>
         ) : (
-          <div className="pr-table-wrap">
-            <table className="pr-table">
-              <thead>
-                <tr>
-                  <th scope="col">Candidato</th>
-                  <th scope="col">Cargo</th>
-                  <th scope="col">Responsable</th>
-                  <th scope="col">Solicitada</th>
-                  <th scope="col">Etapa</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibles.map((s) => (
-                  <tr key={s.id} onClick={() => navigate(`/solicitudes/${s.id}`)}>
-                    <td data-label="Candidato">
-                      <div className="pr-persona">
-                        <span className="ns-avatar" aria-hidden="true">{iniciales(s.candidato.nombre)}</span>
-                        <div>
-                          {/* El enlace permite llegar con teclado; la fila entera también es clicable */}
-                          <Link to={`/solicitudes/${s.id}`} className="pr-row-link" onClick={(e) => e.stopPropagation()}>
-                            {s.candidato.nombre}
-                          </Link>
-                          <span className="pr-sub">{catalogos.origenes[s.candidato.origen] ?? s.candidato.origen}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td data-label="Cargo">
-                      <span className="pr-strong">{s.nombreCargo}</span>
-                      <span className="pr-sub">
-                        {catalogos.familiasCargo[s.familiaCargo] ?? s.familiaCargo} · {s.ubicacion}
-                      </span>
-                    </td>
-                    <td data-label="Responsable">
-                      {s.evaluador ? s.evaluador.nombre : <span className="pr-sin">Sin asignar</span>}
-                    </td>
-                    <td data-label="Solicitada">
-                      <span className="pr-strong pr-nowrap">{formatearFecha(s.fechaSolicitud)}</span>
-                      <span className="pr-sub">{hace(s.fechaSolicitud)}</span>
-                    </td>
-                    <td data-label="Etapa">
-                      <EtapaBadge etapa={s.etapa} etapas={catalogos.etapas} />
-                      {s.timingDias !== null && (
-                        <span className="pr-sub">{s.timingDias} {s.timingDias === 1 ? 'día' : 'días'} de proceso</span>
-                      )}
-                    </td>
+          <>
+            {/* ---------- Tabla (pantallas medianas y grandes) ---------- */}
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-superficie-2 text-left text-xs font-bold tracking-[0.04em] text-sutil uppercase">
+                    {['Candidato', 'Cargo', 'Responsable', 'Solicitada', 'Etapa'].map((col) => (
+                      <th key={col} scope="col" className="border-b border-borde px-4 py-3">
+                        {col}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {visibles.length > 0 && (
-          <p className="pr-pie" aria-live="polite">
-            Mostrando {visibles.length} de {solicitudes.length} solicitudes
-          </p>
+                </thead>
+                <tbody className="divide-y divide-borde">
+                  {visibles.map((s) => (
+                    <tr key={s.id} onClick={() => navigate(`/solicitudes/${s.id}`)} className="cursor-pointer transition-colors hover:bg-acento-suave">
+                      <td className="px-4 py-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <Avatar nombre={s.candidato.nombre} />
+                          <div>
+                            {/* El enlace permite llegar con teclado; la fila entera también es clicable */}
+                            <Link to={`/solicitudes/${s.id}`} onClick={(e) => e.stopPropagation()} className={ENLACE_FILA}>
+                              {s.candidato.nombre}
+                            </Link>
+                            <span className="mt-0.5 block text-[12.5px] text-tenue">{origen(s)}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="block font-semibold text-texto">{s.nombreCargo}</span>
+                        <span className="mt-0.5 block text-[12.5px] text-tenue">
+                          {familia(s)} · {s.ubicacion}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-texto">{s.evaluador ? s.evaluador.nombre : <SinDato>Sin asignar</SinDato>}</td>
+                      <td className="px-4 py-3">
+                        <span className="block font-semibold whitespace-nowrap text-texto">{formatearFecha(s.fechaSolicitud)}</span>
+                        <span className="mt-0.5 block text-[12.5px] text-tenue">{hace(s.fechaSolicitud)}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <EtapaBadge etapa={s.etapa} etapas={catalogos.etapas} />
+                        {timing(s)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ---------- Tarjetas (celulares) ---------- */}
+            <ul className="m-0 list-none divide-y divide-borde p-0 md:hidden">
+              {visibles.map((s) => (
+                <li key={s.id}>
+                  <Link
+                    to={`/solicitudes/${s.id}`}
+                    className="flex flex-col gap-2.5 px-3.5 py-3.5 text-texto no-underline outline-none hover:bg-acento-suave focus-visible:bg-acento-suave"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Avatar nombre={s.candidato.nombre} />
+                      <span className="min-w-0 flex-1">
+                        <strong className="block truncate">{s.candidato.nombre}</strong>
+                        <span className="block text-[12.5px] text-tenue">{origen(s)}</span>
+                      </span>
+                      <EtapaBadge etapa={s.etapa} etapas={catalogos.etapas} />
+                    </span>
+                    <span className="text-[13.5px]">
+                      <strong className="font-semibold">{s.nombreCargo}</strong>
+                      <span className="block text-[12.5px] text-tenue">
+                        {familia(s)} · {s.ubicacion}
+                      </span>
+                    </span>
+                    <span className="flex justify-between gap-3 text-[12.5px] text-tenue">
+                      <span>{s.evaluador ? s.evaluador.nombre : 'Sin asignar'}</span>
+                      <span>
+                        {formatearFecha(s.fechaSolicitud)} · {hace(s.fechaSolicitud)}
+                      </span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+
+            <p aria-live="polite" className="m-0 border-t border-borde px-5 py-3 text-[13px] text-sutil">
+              Mostrando {visibles.length} de {solicitudes.length} solicitudes
+            </p>
+          </>
         )}
       </section>
-    </main>
+    </Pagina>
   );
 };
 

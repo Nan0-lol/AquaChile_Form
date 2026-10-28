@@ -7,6 +7,7 @@
 //   usuarios ──┐ (analista que pide / evaluador responsable)
 //   candidatos ─┴─< solicitudes ──1:1── evaluaciones
 //                        └──< historial (quién hizo qué y cuándo)
+//   postulaciones (formulario público) ──> solicitud (cuando el analista la pasa a evaluación)
 // =====================================================================
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -90,6 +91,28 @@ const ESQUEMA = `
     creado_en     TEXT NOT NULL
   );
 
+  -- Lo que llega desde el formulario público /postular. Queda "nueva" hasta que
+  -- el analista la revisa: la pasa a evaluación (crea la solicitud) o la descarta.
+  CREATE TABLE IF NOT EXISTS postulaciones (
+    id                  TEXT PRIMARY KEY,
+    nombre              TEXT NOT NULL,
+    rut                 TEXT NOT NULL,
+    correo              TEXT NOT NULL,
+    telefono            TEXT NOT NULL,
+    area                TEXT NOT NULL,
+    carta               TEXT NOT NULL DEFAULT '',
+    cv_archivo          TEXT NOT NULL,
+    cv_nombre_original  TEXT NOT NULL,
+    cv_bytes            INTEGER NOT NULL,
+    estado              TEXT NOT NULL DEFAULT 'nueva'
+                        CHECK (estado IN ('nueva', 'en_evaluacion', 'descartada')),
+    solicitud_id        TEXT REFERENCES solicitudes(id) ON DELETE SET NULL,
+    revisado_por        TEXT REFERENCES usuarios(id),
+    revisado_en         TEXT,
+    creado_en           TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_postulaciones_estado ON postulaciones (estado, creado_en);
   CREATE INDEX IF NOT EXISTS idx_solicitudes_candidato ON solicitudes (candidato_id);
   CREATE INDEX IF NOT EXISTS idx_solicitudes_fecha ON solicitudes (fecha_solicitud);
   CREATE INDEX IF NOT EXISTS idx_solicitudes_etapa ON solicitudes (etapa);
@@ -136,6 +159,12 @@ export function crearRepositorio(ruta) {
 
   const db = new DatabaseSync(rutaFinal);
   db.exec('PRAGMA foreign_keys = ON;'); // activa las relaciones (y el borrado en cascada)
+  // Una versión de prueba anterior creó "postulaciones" con otros campos: se rehace
+  // (solo tenía datos ficticios de demostración)
+  const columnasPostulacion = db.prepare('PRAGMA table_info(postulaciones)').all();
+  if (columnasPostulacion.length && !columnasPostulacion.some((c) => c.name === 'rut')) {
+    db.exec('DROP TABLE postulaciones');
+  }
   db.exec(ESQUEMA);
 
   const q = (sql) => db.prepare(sql);
@@ -400,12 +429,75 @@ export function crearRepositorio(ruta) {
     },
   };
 
+  // -------------------------------------------------------------------
+  // POSTULACIONES (formulario público)
+  // -------------------------------------------------------------------
+  // candidato_id: si ya hay un candidato con ese correo (para no duplicarlo)
+  const SELECT_POSTULACION = `
+    SELECT p.*,
+           r.nombre AS revisor_nombre,
+           (SELECT c.id FROM candidatos c WHERE c.correo = p.correo) AS candidato_id
+      FROM postulaciones p
+      LEFT JOIN usuarios r ON r.id = p.revisado_por`;
+
+  const postulaciones = {
+    crear(p) {
+      const id = nuevoId();
+      q(`INSERT INTO postulaciones (
+           id, nombre, rut, correo, telefono, area, carta,
+           cv_archivo, cv_nombre_original, cv_bytes, creado_en
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, p.nombre, p.rut, p.correo, p.telefono, p.area, p.carta ?? '',
+        p.cvArchivo, p.cvNombreOriginal, p.cvBytes, p.creadoEn ?? ahoraIso()
+      );
+      return id;
+    },
+    obtener(id) {
+      return q(`${SELECT_POSTULACION} WHERE p.id = ?`).get(id) ?? null;
+    },
+    /** Filtros opcionales: estado y q (nombre, correo o RUT) */
+    listar({ estado, q: busqueda } = {}) {
+      const condiciones = [];
+      const valores = [];
+      if (estado) {
+        condiciones.push('p.estado = ?');
+        valores.push(estado);
+      }
+      if (busqueda) {
+        const patron = `%${busqueda.toLowerCase()}%`;
+        condiciones.push('(lower(p.nombre) LIKE ? OR lower(p.correo) LIKE ? OR lower(p.rut) LIKE ?)');
+        valores.push(patron, patron, patron);
+      }
+      const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+      return q(`${SELECT_POSTULACION} ${where} ORDER BY p.creado_en DESC`).all(...valores);
+    },
+    /** Cambia el estado y deja registro de quién la revisó */
+    cambiarEstado(id, estado, usuarioId, solicitudId = null) {
+      return (
+        Number(
+          q(`UPDATE postulaciones SET estado = ?, solicitud_id = ?, revisado_por = ?, revisado_en = ?
+              WHERE id = ?`).run(estado, solicitudId, usuarioId ?? null, ahoraIso(), id).changes
+        ) > 0
+      );
+    },
+    eliminar(id) {
+      return Number(q('DELETE FROM postulaciones WHERE id = ?').run(id).changes) > 0;
+    },
+    contar({ estado } = {}) {
+      const fila = estado
+        ? q('SELECT COUNT(*) AS n FROM postulaciones WHERE estado = ?').get(estado)
+        : q('SELECT COUNT(*) AS n FROM postulaciones').get();
+      return Number(fila.n);
+    },
+  };
+
   return {
     usuarios,
     candidatos,
     solicitudes,
     evaluaciones,
     historial,
+    postulaciones,
     transaccion,
     cerrar() {
       db.close();

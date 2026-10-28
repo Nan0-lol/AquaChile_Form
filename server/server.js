@@ -48,6 +48,7 @@ const app = crearApp({
   limites: {
     login: Number(process.env.LIMITE_LOGIN) || undefined,
     envios: Number(process.env.LIMITE_ENVIOS) || undefined,
+    postulaciones: Number(process.env.LIMITE_POSTULACIONES) || undefined,
   },
 });
 

@@ -72,6 +72,8 @@ export function calcularIndicadores(repo, { ahora = new Date(), meses = 6 } = {}
       cantidad,
     })),
     porMes,
+    // Lo que llegó por el formulario público y nadie ha revisado
+    postulacionesPorRevisar: repo.postulaciones.contar({ estado: 'nueva' }),
     timingPromedioDias: promedio,
     informesConTiming: timings.length,
   };

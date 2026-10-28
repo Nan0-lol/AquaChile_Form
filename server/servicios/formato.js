@@ -69,3 +69,21 @@ export const aHistorial = (fila) => ({
   usuario: fila.usuario_nombre ?? 'Sistema',
   fecha: fila.creado_en,
 });
+
+export const aPostulacion = (fila) => ({
+  id: fila.id,
+  nombre: fila.nombre,
+  rut: fila.rut,
+  correo: fila.correo,
+  telefono: fila.telefono,
+  area: fila.area,
+  carta: fila.carta,
+  cv: { nombre: fila.cv_nombre_original, bytes: fila.cv_bytes },
+  estado: fila.estado,
+  solicitudId: fila.solicitud_id ?? null,
+  // Si ya existe un candidato con el mismo correo (para no registrarlo dos veces)
+  candidatoId: fila.candidato_id ?? null,
+  revisadoPor: fila.revisor_nombre ?? null,
+  revisadoEn: fila.revisado_en ?? null,
+  creadoEn: fila.creado_en,
+});

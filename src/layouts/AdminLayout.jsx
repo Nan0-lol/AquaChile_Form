@@ -3,7 +3,6 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import { verificarSesion } from '../auth';
 import { EVENTO_SESION_EXPIRADA } from '../services/api';
-import './AdminLayout.css';
 
 const CLAVE_TEMA = 'aquachile_tema';
 
@@ -19,8 +18,7 @@ const temaInicial = () => {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-// Esqueleto del panel:
-//   AdminHeader arriba y la página del panel debajo (<Outlet />).
+// Esqueleto del panel: AdminHeader arriba y la página debajo (<Outlet />).
 // Aquí vive el tema (claro/oscuro) y el control de la sesión, así todas
 // las páginas del panel lo comparten.
 const AdminLayout = () => {
@@ -28,15 +26,17 @@ const AdminLayout = () => {
   const [tema, setTema] = useState(temaInicial);
   const [, setSesionRevisada] = useState(false);
 
+  // El tema se marca en <html>: así los colores de index.css cambian en toda la página
   useEffect(() => {
     try {
       localStorage.setItem(CLAVE_TEMA, tema);
     } catch {
       /* si no se puede guardar, el tema igual funciona durante la visita */
     }
-    // El body también se oscurece, para que no aparezca blanco al hacer scroll
-    document.body.classList.toggle('db-body-dark', tema === 'dark');
-    return () => document.body.classList.remove('db-body-dark');
+    document.documentElement.dataset.theme = tema;
+    return () => {
+      delete document.documentElement.dataset.theme; // el login siempre se ve claro
+    };
   }, [tema]);
 
   // Si la sesión expira (o el servidor se reinició), se vuelve al login con un aviso
@@ -53,9 +53,9 @@ const AdminLayout = () => {
   const alternarTema = () => setTema((t) => (t === 'dark' ? 'light' : 'dark'));
 
   return (
-    <div className="db-page" data-theme={tema}>
+    <div className="flex min-h-screen flex-col bg-fondo text-texto">
       <AdminHeader tema={tema} onAlternarTema={alternarTema} />
-      <div className="db-page-content">
+      <div className="flex-1">
         <Outlet />
       </div>
     </div>

@@ -103,19 +103,53 @@ export const guardarEvaluacion = (solicitudId, evaluacion) =>
   pedir(`/solicitudes/${id(solicitudId)}/evaluacion`, { metodo: 'PUT', json: evaluacion });
 export const eliminarSolicitud = (solicitudId) => pedir(`/solicitudes/${id(solicitudId)}`, { metodo: 'DELETE' });
 
-/** Descarga el CV o el descriptor con su nombre original (lleva el token, por eso no es un <a href>) */
-export async function descargarAdjunto(solicitud, tipo = 'cv') {
-  const res = await pedir(`/solicitudes/${id(solicitud.id)}/${tipo}`, { respuesta: 'blob' });
+/** Descarga un archivo protegido con su nombre original (lleva el token, por eso no es un <a href>) */
+async function descargar(ruta, nombre) {
+  const res = await pedir(ruta, { respuesta: 'blob' });
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const enlace = document.createElement('a');
   enlace.href = url;
-  enlace.download = solicitud[tipo]?.nombre || `${tipo}.pdf`;
+  enlace.download = nombre;
   document.body.appendChild(enlace);
   enlace.click();
   enlace.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+/** CV o descriptor de una solicitud */
+export const descargarAdjunto = (solicitud, tipo = 'cv') =>
+  descargar(`/solicitudes/${id(solicitud.id)}/${tipo}`, solicitud[tipo]?.nombre || `${tipo}.pdf`);
+
+// ---------- Postulaciones (bandeja del analista) ----------
+/** filtros: { estado, q } */
+export const listarPostulaciones = (filtros) => pedir(`/postulaciones${aQuery(filtros)}`);
+export const obtenerPostulacion = (postulacionId) => pedir(`/postulaciones/${id(postulacionId)}`);
+/** estado: 'descartada' o 'nueva' (reabrir) */
+export const cambiarEstadoPostulacion = (postulacionId, estado) =>
+  pedir(`/postulaciones/${id(postulacionId)}/estado`, { metodo: 'PATCH', json: { estado } });
+export const eliminarPostulacion = (postulacionId) => pedir(`/postulaciones/${id(postulacionId)}`, { metodo: 'DELETE' });
+export const descargarCvPostulacion = (postulacion) =>
+  descargar(`/postulaciones/${id(postulacion.id)}/cv`, postulacion.cv?.nombre || 'cv.pdf');
+
+// ---------- Formulario público /postular (sin sesión) ----------
+// Van directo con fetch, sin token: la página pública no sabe nada de sesiones.
+async function pedirPublico(ruta, opciones = {}) {
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/publico${ruta}`, opciones);
+  } catch {
+    throw new ErrorApi('No pudimos conectarnos. Revisa tu conexión a internet e inténtalo de nuevo.', 0);
+  }
+  const datos = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ErrorApi(datos.mensaje || 'No pudimos enviar tu postulación. Inténtalo más tarde.', res.status, datos);
+  return datos;
+}
+
+/** { familiasCargo } */
+export const obtenerOpcionesPublicas = () => pedirPublico('/opciones');
+/** formData: lo arma construirFormDataPostulacion() de utils/postulacion.js */
+export const enviarPostulacion = (formData) => pedirPublico('/postulaciones', { method: 'POST', body: formData });
 
 // ---------- Indicadores ----------
 export const obtenerIndicadores = () => pedir('/indicadores');

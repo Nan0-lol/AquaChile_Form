@@ -14,6 +14,8 @@ import { rutasSesion } from './rutas/sesion.js';
 import { rutasCatalogos } from './rutas/catalogos.js';
 import { rutasCandidatos } from './rutas/candidatos.js';
 import { rutasSolicitudes } from './rutas/solicitudes.js';
+import { rutasPostulaciones } from './rutas/postulaciones.js';
+import { rutasPublicas } from './rutas/publico.js';
 
 export const TAMANO_MAXIMO = 5 * 1024 * 1024; // 5 MB por archivo
 const EXTENSIONES_VALIDAS = ['.pdf', '.docx'];
@@ -26,7 +28,7 @@ const EXTENSIONES_VALIDAS = ['.pdf', '.docx'];
  * @param {string} opciones.carpetaArchivos  dónde se guardan los CV y descriptores
  * @param {string} [opciones.origenPermitido] dirección del frontend (CORS)
  * @param {boolean} [opciones.produccion]
- * @param {object} [opciones.limites]        { login, envios } máximo por IP cada 15 min
+ * @param {object} [opciones.limites]        { login, envios, postulaciones } máximo por IP cada 15 min
  */
 export function crearApp({
   repo,
@@ -71,6 +73,12 @@ export function crearApp({
   });
   // Frena envíos masivos de solicitudes (por ejemplo, un script)
   const limitarEnvios = crearLimitador({ ventanaMs, maximo: limites.envios ?? 60 });
+  // El formulario público es lo más expuesto: pocas postulaciones por IP
+  const limitarPostulaciones = crearLimitador({
+    ventanaMs,
+    maximo: limites.postulaciones ?? 10,
+    mensaje: 'Recibimos varias postulaciones seguidas desde tu conexión. Inténtalo de nuevo en unos minutos.',
+  });
 
   const app = express();
   app.disable('x-powered-by');
@@ -87,9 +95,14 @@ export function crearApp({
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+  // Lo único público: el formulario de postulación (solo envía datos)
+  app.use('/api/publico', rutasPublicas({ repo, subida, carpetaArchivos, limitarPostulaciones }));
+
+  // Todo lo demás exige sesión iniciada
   app.use('/api', rutasSesion({ auth, limitarLogin }));
   app.use('/api', rutasCatalogos({ repo, auth }));
   app.use('/api/candidatos', rutasCandidatos({ repo, auth, carpetaArchivos }));
+  app.use('/api/postulaciones', rutasPostulaciones({ repo, auth, carpetaArchivos }));
   app.use(
     '/api/solicitudes',
     rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, limitarEnvios })
@@ -120,6 +133,7 @@ export function crearApp({
   app.detener = () => {
     limitarLogin.detener();
     limitarEnvios.detener();
+    limitarPostulaciones.detener();
   };
   return app;
 }

@@ -1,7 +1,7 @@
 // =====================================================================
 // DATOS FICTICIOS PARA LA DEMO
 //   npm run seed            → carga los datos solo si no hay candidatos
-//   npm run seed -- --reset → borra TODOS los candidatos y solicitudes y los vuelve a cargar
+//   npm run seed -- --reset → borra TODOS los candidatos, solicitudes y postulaciones y los vuelve a cargar
 //
 // Todas las personas, correos, teléfonos y CVs son inventados (lo exige el caso:
 // nunca usar datos reales de candidatos).
@@ -80,6 +80,17 @@ const CASOS = [
   { nombre: 'Joaquín Leiva', origen: 'externo', familia: 'supervisor_b', cargo: 'Supervisor de planta', ubicacion: 'Planta Magallanes', unidad: 'industrial', etapa: 'recibida', diasAtras: 1, evaluador: null },
 ];
 
+// Lo que llegó por el formulario público y aún nadie revisa (horasAtras = cuándo llegó)
+// RUT inventados (válidos solo para que pasen la verificación del dígito)
+const POSTULACIONES = [
+  { nombre: 'Camila Henríquez', rut: '15.234.876-2', area: 'piscicultura', horasAtras: 5,
+    carta: 'Soy técnica en acuicultura y me interesa trabajar en pisciculturas del sur. Tengo experiencia en monitoreo de calidad de agua (dato inventado).' },
+  { nombre: 'Diego Fuentealba', rut: '17.890.123-0', area: 'planta', horasAtras: 28, carta: '' },
+  { nombre: 'Fernanda Soto', rut: '19.345.678-2', area: 'administracion', horasAtras: 52,
+    carta: 'Ingeniera comercial con interés en control de gestión. Disponible de inmediato (dato inventado).' },
+  { nombre: 'Cristóbal Muñoz', rut: '20.456.789-1', area: 'comercial', horasAtras: 120, carta: '', estado: 'descartada' },
+];
+
 const sinTildes = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
 const correoDe = (nombre) => `${sinTildes(nombre).toLowerCase().replace(/\s+/g, '.')}@ejemplo.cl`;
 const fechaIso = (ms) => new Date(ms).toISOString();
@@ -97,8 +108,38 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
   }
   const analista = usuario('analista');
 
-  return repo.transaccion(() =>
-    CASOS.map((caso, i) => {
+  // CV de ejemplo en disco; devuelve sus datos para guardarlos en la base
+  const crearCv = (nombre, cargo) => {
+    const archivo = `${crypto.randomUUID()}.pdf`;
+    const pdf = crearPdfSimple(`CV de ejemplo - ${nombre}`, [
+      'Documento ficticio generado para la demostración del sistema.',
+      `Cargo al que postula: ${cargo}`,
+      `Correo: ${correoDe(nombre)}`,
+      'Experiencia: 4 años en el área (dato inventado).',
+    ]);
+    fs.writeFileSync(path.join(carpetaArchivos, archivo), pdf);
+    return { archivo, nombreOriginal: `CV_${sinTildes(nombre).replace(/\s+/g, '_')}.pdf`, bytes: pdf.length };
+  };
+
+  return repo.transaccion(() => {
+    POSTULACIONES.forEach((p, i) => {
+      const cv = crearCv(p.nombre, 'Postulación web');
+      const id = repo.postulaciones.crear({
+        nombre: p.nombre,
+        rut: p.rut,
+        correo: correoDe(p.nombre),
+        telefono: `+5699100${String(1001 + i).padStart(4, '0')}`,
+        area: p.area,
+        carta: p.carta,
+        cvArchivo: cv.archivo,
+        cvNombreOriginal: cv.nombreOriginal,
+        cvBytes: cv.bytes,
+        creadoEn: fechaIso(ahora - p.horasAtras * 3_600_000),
+      });
+      if (p.estado) repo.postulaciones.cambiarEstado(id, p.estado, analista.id);
+    });
+
+    return CASOS.map((caso, i) => {
       const telefono = `+5699000${String(1001 + i).padStart(4, '0')}`;
       const candidatoId = repo.candidatos.crear({
         nombre: caso.nombre,
@@ -107,14 +148,7 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
         origen: caso.origen,
       });
 
-      const cvArchivo = `${crypto.randomUUID()}.pdf`;
-      const pdf = crearPdfSimple(`CV de ejemplo - ${caso.nombre}`, [
-        'Documento ficticio generado para la demostración del sistema.',
-        `Cargo al que postula: ${caso.cargo}`,
-        `Correo: ${correoDe(caso.nombre)}`,
-        'Experiencia: 4 años en el área (dato inventado).',
-      ]);
-      fs.writeFileSync(path.join(carpetaArchivos, cvArchivo), pdf);
+      const cv = crearCv(caso.nombre, caso.cargo);
 
       const inicio = ahora - caso.diasAtras * DIA_MS;
       const evaluador = caso.evaluador ? usuario(caso.evaluador) : null;
@@ -130,9 +164,9 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
         requiereReferencias: Boolean(caso.requiereReferencias),
         referido: Boolean(caso.referido),
         aspectosIndagar: caso.aspectos ?? '',
-        cvArchivo,
-        cvNombreOriginal: `CV_${sinTildes(caso.nombre).replace(/\s+/g, '_')}.pdf`,
-        cvBytes: pdf.length,
+        cvArchivo: cv.archivo,
+        cvNombreOriginal: cv.nombreOriginal,
+        cvBytes: cv.bytes,
         etapa: caso.etapa,
         fechaSolicitud: fechaIso(inicio),
       });
@@ -154,8 +188,8 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
         repo.historial.registrar(solicitudId, evaluador?.id, 'Etapa cambiada', `${ETAPAS.recibida} → ${ETAPAS[caso.etapa]}`);
       }
       return solicitudId;
-    })
-  );
+    });
+  });
 }
 
 // ---------------------------------------------------------------------
@@ -186,11 +220,16 @@ if (ejecutadoDirecto) {
       }
       repo.candidatos.eliminar(c.id);
     }
-    console.log('Candidatos y solicitudes anteriores eliminados.');
+    for (const p of repo.postulaciones.listar()) {
+      fs.rmSync(path.join(CARPETA_ARCHIVOS, path.basename(p.cv_archivo)), { force: true });
+      repo.postulaciones.eliminar(p.id);
+    }
+    console.log('Candidatos, solicitudes y postulaciones anteriores eliminados.');
   }
 
   const ids = cargarDatosDemo(repo);
-  console.log(`Listo: ${ids.length} candidatos ficticios con sus solicitudes en distintas etapas.`);
+  console.log(`Listo: ${ids.length} candidatos ficticios con sus solicitudes en distintas etapas`);
+  console.log(`y ${repo.postulaciones.contar()} postulaciones web de ejemplo (${repo.postulaciones.contar({ estado: 'nueva' })} por revisar).`);
   console.table(USUARIOS_DEMO.map(({ usuario, password, rol }) => ({ usuario, contraseña: password, rol })));
   repo.cerrar();
 }

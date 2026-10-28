@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { haySesion, iniciarSesion, rutaInicio } from '../auth';
-import './LoginPage.css';
+import { cx, Spinner } from '../components/ui';
 
 const IconoOjo = ({ tachado }) => (
   <svg
@@ -100,31 +100,36 @@ const LoginPage = () => {
   };
 
   const hayError = Boolean(error);
+  const claseInput = cx(
+    'h-12 w-full rounded-md border bg-white px-[15px] text-[0.95rem] text-slate-800 transition-[border-color,box-shadow]',
+    'focus:outline-none focus:ring-3 disabled:cursor-not-allowed disabled:bg-slate-100',
+    hayError ? 'border-rose-600 focus:ring-rose-600/15' : 'border-slate-300 focus:border-[#197aa8] focus:ring-[#197aa8]/15'
+  );
 
   return (
-    <main
-      className="login-page"
-      style={{ backgroundImage: `url('/FondoFormulario.png')` }}
-    >
-      <div className="login-overlay">
-        <div className="login-card">
-          <div className="login-icon">
+    // El login siempre se ve en modo claro (todavía no se sabe qué tema prefiere la persona)
+    <section className="flex min-h-[560px] bg-cover bg-[center_right] bg-no-repeat" style={{ backgroundImage: `url('/FondoFormulario.png')` }}>
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-linear-100 from-[#1e2d38]/90 via-[#1e2d38]/72 to-[#1e2d38]/45 px-5 py-12">
+        <div className="w-full max-w-[420px] animate-aparecer rounded-xl bg-white px-6 pt-8 pb-6 text-slate-800 shadow-[0_30px_60px_-15px_rgb(0_0_0/0.45)] sm:px-10 sm:pt-10 sm:pb-8">
+          <div className="mx-auto mb-[18px] flex size-[52px] items-center justify-center rounded-full bg-[#197aa8]/8 text-[#197aa8]">
             <IconoCandado />
           </div>
-          <h1>Evaluaciones Psicolaborales</h1>
-          <p className="login-subtitle">
+          <h1 className="mt-0 mb-2 text-center text-2xl font-bold text-[#3e5463]">Evaluaciones Psicolaborales</h1>
+          <p className="mt-0 mb-7 text-center text-sm leading-normal text-slate-600">
             Acceso exclusivo para el equipo de Reclutamiento y Selección.
           </p>
 
           {sesionExpirada && !hayError && (
-            <p className="login-aviso" role="status">
+            <p role="status" className="mt-0 mb-[18px] rounded-lg border border-sky-200 bg-sky-100 px-3.5 py-2.5 text-sm leading-snug text-sky-800">
               Tu sesión expiró. Vuelve a ingresar para continuar.
             </p>
           )}
 
           <form onSubmit={handleSubmit} noValidate>
-            <div className="login-field">
-              <label htmlFor="usuario">Usuario</label>
+            <div className="mb-5 flex flex-col">
+              <label htmlFor="usuario" className="mb-2 text-sm font-medium">
+                Usuario
+              </label>
               <input
                 type="text"
                 id="usuario"
@@ -136,12 +141,15 @@ const LoginPage = () => {
                 aria-describedby={hayError ? 'login-error' : undefined}
                 disabled={cargando}
                 autoFocus
+                className={claseInput}
               />
             </div>
 
-            <div className="login-field">
-              <label htmlFor="password">Contraseña</label>
-              <div className="password-wrapper">
+            <div className="mb-5 flex flex-col">
+              <label htmlFor="password" className="mb-2 text-sm font-medium">
+                Contraseña
+              </label>
+              <div className="relative flex items-center">
                 <input
                   type={mostrarPassword ? 'text' : 'password'}
                   id="password"
@@ -152,12 +160,13 @@ const LoginPage = () => {
                   aria-invalid={hayError}
                   aria-describedby={hayError ? 'login-error' : undefined}
                   disabled={cargando}
+                  className={cx(claseInput, 'pr-12')}
                 />
                 <button
                   type="button"
-                  className="btn-toggle-password"
                   onClick={() => setMostrarPassword((v) => !v)}
                   aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-2 flex size-[34px] cursor-pointer items-center justify-center rounded-md text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#3e5463] focus-visible:outline-2 focus-visible:outline-[#197aa8]"
                 >
                   <IconoOjo tachado={mostrarPassword} />
                 </button>
@@ -165,15 +174,23 @@ const LoginPage = () => {
             </div>
 
             {hayError && (
-              <p className="login-error" id="login-error" role="alert">
+              <p
+                id="login-error"
+                role="alert"
+                className="-mt-1.5 mb-4 animate-aparecer rounded border-l-3 border-rose-600 bg-rose-50 px-3 py-2.5 text-[13.5px] font-medium text-rose-700"
+              >
                 {error}
               </p>
             )}
 
-            <button type="submit" className="btn-login" disabled={cargando}>
+            <button
+              type="submit"
+              disabled={cargando}
+              className="flex h-12 w-full cursor-pointer items-center justify-center gap-2.5 rounded-md bg-[#197aa8] text-base font-semibold text-white shadow-[0_8px_18px_-8px_rgb(25_122_168/0.6)] transition-colors hover:bg-[#166d96] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#197aa8]/40 disabled:cursor-wait disabled:opacity-80"
+            >
               {cargando ? (
                 <>
-                  <span className="login-spinner" aria-hidden="true"></span>
+                  <Spinner className="size-[18px]" />
                   Ingresando…
                 </>
               ) : (
@@ -182,13 +199,12 @@ const LoginPage = () => {
             </button>
           </form>
 
-          <p className="login-help">
+          <p className="mt-6 mb-0 border-t border-slate-200 pt-5 text-center text-[13px] leading-normal text-slate-600">
             ¿Problemas para ingresar? Contacta al administrador del sistema.
           </p>
         </div>
-
       </div>
-    </main>
+    </section>
   );
 };
 

@@ -24,9 +24,14 @@ export const PERMISOS = {
   'solicitud:etapa': ['admin', 'evaluador'],
   'evaluacion:editar': ['admin', 'evaluador'],
 
+  // Postulaciones del formulario público: el analista las revisa
+  'postulacion:ver': ['admin', 'analista', 'jefatura'],
+  'postulacion:gestionar': ['admin', 'analista'],
+
   // Borrado permanente
   'solicitud:eliminar': ['admin', 'analista'],
   'candidato:eliminar': ['admin'],
+  'postulacion:eliminar': ['admin'],
 };
 
 /** ¿El rol puede realizar la acción? */

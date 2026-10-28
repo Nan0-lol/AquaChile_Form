@@ -1,0 +1,215 @@
+/* =====================================================================
+   AQUACHILE – ESTILOS GLOBALES CON TAILWIND CSS v4
+   Todo el diseño se arma con clases de Tailwind en los componentes.
+   Aquí solo se definen:
+     1. Los colores de la marca como "tokens" (variables), en claro y oscuro.
+     2. El tema de Tailwind que usa esos tokens (bg-superficie, text-tenue…).
+   Cambiar de tema = cambiar el atributo data-theme de <html>; los mismos
+   nombres de clase sirven para ambos.
+   Contraste verificado AA (≥ 4.5:1) para textos en ambos temas.
+   ===================================================================== */
+@import 'tailwindcss';
+
+/* dark: también responde al botón de tema (data-theme="dark"), no solo al sistema */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* ---------- 1. Tokens: tema claro (por defecto) ---------- */
+:root {
+  --fondo: #f0f4f8;
+  --superficie: #ffffff;
+  --superficie-2: #f8fafc;
+  --superficie-3: #f1f5f9;
+  --texto: #1e293b;
+  --tenue: #475569; /* texto secundario: 7.58:1 sobre blanco */
+  --sutil: #64748b; /* texto de apoyo: 4.76:1 sobre blanco */
+  --titulo: #3e5463;
+  --borde: #e2e8f0;
+  --borde-fuerte: #cbd5e1;
+
+  --marca: #3e5463; /* azul pizarra AquaChile: header y footer */
+  --encabezado: #3e5463;
+  --acento: #197aa8; /* textos e íconos */
+  --acento-solido: #197aa8; /* fondos con texto blanco (4.78:1) */
+  --acento-hover: #166d96;
+  --acento-suave: rgb(25 122 168 / 0.08);
+  --anillo: rgb(25 122 168 / 0.18);
+  --acento-claro: #7dd3fc; /* acento sobre fondos oscuros */
+
+  --error: #e11d48; /* bordes */
+  --peligro: #9f1239; /* textos de error */
+  --peligro-suave: #fff1f2;
+  --peligro-borde: #fecdd3;
+  --peligro-solido: #be123c;
+
+  /* Etapas del proceso (texto / fondo) */
+  --e-recibida: #b45309;
+  --e-recibida-bg: #fef3c7;
+  --e-agendada: #1d4ed8;
+  --e-agendada-bg: #dbeafe;
+  --e-realizada: #6d28d9;
+  --e-realizada-bg: #ede9fe;
+  --e-enviado: #15803d;
+  --e-enviado-bg: #dcfce7;
+  --hecho: #15803d;
+
+  --wa: #15803d;
+  --wa-bg: #dcfce7;
+  --pdf: #dc2626;
+  --word: #2563eb;
+
+  /* Gráficos: pares validados para daltonismo en ambos temas */
+  --viz-1: #2a78d6;
+  --viz-2: #eb6834;
+  --viz-barra: #197aa8;
+  --estado-bueno: #15803d;
+  --estado-alerta: #b45309;
+  --estado-critico: #be123c;
+
+  --sombra: 0 1px 3px rgb(15 30 45 / 0.05);
+  --sombra-alta: 0 16px 36px -12px rgb(15 30 45 / 0.28);
+  color-scheme: light;
+}
+
+/* ---------- Tokens: tema oscuro ---------- */
+[data-theme='dark'] {
+  --fondo: #0d1821;
+  --superficie: #162230;
+  --superficie-2: #1a2736;
+  --superficie-3: #213040;
+  --texto: #e2e8f0;
+  --tenue: #a3b3c2;
+  --sutil: #8a9bab;
+  --titulo: #f1f5f9;
+  --borde: #263646;
+  --borde-fuerte: #34485c;
+
+  --encabezado: #111d28;
+  --acento: #4fb3e3;
+  --acento-solido: #197aa8;
+  --acento-hover: #1d8cc0;
+  --acento-suave: rgb(79 179 227 / 0.12);
+  --anillo: rgb(79 179 227 / 0.3);
+
+  --peligro: #fda4af;
+  --peligro-suave: rgb(225 29 72 / 0.12);
+  --peligro-borde: rgb(225 29 72 / 0.35);
+
+  --e-recibida: #fbbf24;
+  --e-recibida-bg: rgb(251 191 36 / 0.14);
+  --e-agendada: #93c5fd;
+  --e-agendada-bg: rgb(59 130 246 / 0.18);
+  --e-realizada: #c4b5fd;
+  --e-realizada-bg: rgb(139 92 246 / 0.2);
+  --e-enviado: #4ade80;
+  --e-enviado-bg: rgb(34 197 94 / 0.15);
+
+  --wa: #4ade80;
+  --wa-bg: rgb(34 197 94 / 0.14);
+  --pdf: #f87171;
+  --word: #60a5fa;
+
+  --viz-1: #3987e5;
+  --viz-2: #d95926;
+  --viz-barra: #4fb3e3;
+  --estado-bueno: #4ade80;
+  --estado-alerta: #fbbf24;
+  --estado-critico: #fb7185;
+
+  --sombra: 0 1px 3px rgb(0 0 0 / 0.3);
+  --sombra-alta: 0 16px 36px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark; /* barras de scroll y calendarios oscuros */
+}
+
+/* ---------- 2. Tema de Tailwind: clases con los nombres de la marca ---------- */
+/* "inline": la clase usa la variable directamente, así cambia sola con el tema */
+@theme inline {
+  --font-sans: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --color-fondo: var(--fondo);
+  --color-superficie: var(--superficie);
+  --color-superficie-2: var(--superficie-2);
+  --color-superficie-3: var(--superficie-3);
+  --color-texto: var(--texto);
+  --color-tenue: var(--tenue);
+  --color-sutil: var(--sutil);
+  --color-titulo: var(--titulo);
+  --color-borde: var(--borde);
+  --color-borde-fuerte: var(--borde-fuerte);
+
+  --color-marca: var(--marca);
+  --color-encabezado: var(--encabezado);
+  --color-acento: var(--acento);
+  --color-acento-solido: var(--acento-solido);
+  --color-acento-hover: var(--acento-hover);
+  --color-acento-suave: var(--acento-suave);
+  --color-anillo: var(--anillo);
+  --color-acento-claro: var(--acento-claro);
+
+  --color-error: var(--error);
+  --color-peligro: var(--peligro);
+  --color-peligro-suave: var(--peligro-suave);
+  --color-peligro-borde: var(--peligro-borde);
+  --color-peligro-solido: var(--peligro-solido);
+
+  --color-e-recibida: var(--e-recibida);
+  --color-e-recibida-bg: var(--e-recibida-bg);
+  --color-e-agendada: var(--e-agendada);
+  --color-e-agendada-bg: var(--e-agendada-bg);
+  --color-e-realizada: var(--e-realizada);
+  --color-e-realizada-bg: var(--e-realizada-bg);
+  --color-e-enviado: var(--e-enviado);
+  --color-e-enviado-bg: var(--e-enviado-bg);
+  --color-hecho: var(--hecho);
+
+  --color-wa: var(--wa);
+  --color-wa-bg: var(--wa-bg);
+  --color-pdf: var(--pdf);
+  --color-word: var(--word);
+
+  --color-viz-1: var(--viz-1);
+  --color-viz-2: var(--viz-2);
+  --color-viz-barra: var(--viz-barra);
+  --color-estado-bueno: var(--estado-bueno);
+  --color-estado-alerta: var(--estado-alerta);
+  --color-estado-critico: var(--estado-critico);
+
+  --shadow-suave: var(--sombra);
+  --shadow-alta: var(--sombra-alta);
+
+  --animate-aparecer: aparecer 0.25s ease;
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html,
+  body {
+    margin: 0;
+  }
+  body {
+    @apply bg-fondo font-sans text-texto antialiased transition-colors duration-200;
+  }
+  /* El fondo semitransparente de los diálogos */
+  dialog::backdrop {
+    background: rgb(10 20 30 / 0.55);
+  }
+  /* Respeta a quienes piden menos animación en su sistema */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
