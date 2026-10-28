@@ -1,13 +1,21 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-// Barra superior de las páginas públicas (formulario de postulación e inicio de sesión).
+// Barra superior de las páginas públicas.
+//   - En el login es transparente y va encima de la foto (solo se ve el logo).
+//   - En /postular es la franja corporativa de siempre.
 // El logo lleva al inicio de la página en que se está: quien postula nunca llega al login por aquí.
-const NavBar = () => {
+const NavBar = ({ transparente = false }) => {
   const { pathname } = useLocation();
   const inicio = pathname.startsWith('/postular') ? '/postular' : '/login';
   return (
-    <header className="relative z-20 flex min-h-16 items-center justify-between bg-marca px-5 shadow-[0_4px_12px_rgb(0_0_0/0.12)] md:min-h-[72px] md:px-[6%]">
+    <header
+      className={
+        transparente
+          ? 'absolute inset-x-0 top-0 z-20 flex min-h-16 items-center bg-linear-to-b from-[#1e2d38]/55 to-transparent px-5 md:min-h-[88px] md:px-8'
+          : 'relative z-20 flex min-h-16 items-center bg-marca px-5 shadow-[0_4px_12px_rgb(0_0_0/0.12)] md:min-h-[72px] md:px-8'
+      }
+    >
       <Link
         to={inicio}
         aria-label="AquaChile, ir al inicio"

@@ -340,7 +340,7 @@ const Postular = () => {
       <div className="relative -mt-20 px-4">
         <section
           aria-label="Formulario de postulación"
-          className={cx(claseTarjeta, 'mx-auto max-w-[588px] px-5 pt-7 pb-8 shadow-alta sm:px-8 sm:pt-9 sm:pb-9')}
+          className={cx(claseTarjeta, 'mx-auto max-w-[760px] px-5 pt-7 pb-8 shadow-alta sm:px-10 sm:pt-10 sm:pb-10')}
         >
           {contenido}
         </section>

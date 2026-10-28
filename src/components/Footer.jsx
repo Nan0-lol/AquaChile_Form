@@ -18,7 +18,7 @@ const REDES_SOCIALES = [
 // Sobre el fondo oscuro se usa el acento claro (el acento normal no llega a 4.5:1)
 const ENLACE_CLARO = 'no-underline outline-none transition-colors hover:text-acento-claro focus-visible:text-acento-claro';
 
-// Footer corporativo: aparece en la página de inicio de sesión (PublicLayout)
+// Footer corporativo: aparece en el formulario público /postular (PublicLayout)
 const Footer = () => (
   <footer className="bg-marca px-6 pt-9 text-white">
     <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-6">
