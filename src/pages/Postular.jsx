@@ -40,6 +40,10 @@ import ZonaArchivo from '../components/ZonaArchivo';
 // Lo que envía llega a la bandeja "Postulaciones" del analista.
 // =====================================================================
 
+// Efecto "zoom" al pasar el mouse (como el formulario original). Se desactiva si la
+// persona pidió menos animaciones en su sistema (motion-reduce).
+const ZOOM = 'transition-[scale,translate,box-shadow] duration-300 ease-out motion-reduce:transition-none';
+
 // Cifras del Reporte Integrado AquaChile 2024 (actualízalas cuando salga el reporte siguiente)
 const CIFRAS = [
   { valor: '+5.800', etiqueta: 'colaboradores' },
@@ -299,14 +303,15 @@ const Postular = () => {
           </div>
 
           {errorEnvio && <Alerta>{errorEnvio}</Alerta>}
-          <Boton type="submit" tamano="lg" disabled={enviando} className="w-full">
+          <Boton type="submit" tamano="lg" disabled={enviando} className="group w-full">
             {enviando ? (
               <>
                 <Spinner /> Enviando…
               </>
             ) : (
               <>
-                Enviar postulación <FaArrowRight aria-hidden="true" className="text-sm" />
+                Enviar postulación{' '}
+                <FaArrowRight aria-hidden="true" className="text-sm transition-[translate] duration-200 group-hover:translate-x-1" />
               </>
             )}
           </Boton>
@@ -340,7 +345,11 @@ const Postular = () => {
       <div className="relative -mt-20 px-4">
         <section
           aria-label="Formulario de postulación"
-          className={cx(claseTarjeta, 'mx-auto max-w-[588px] px-5 pt-7 pb-8 shadow-alta sm:px-8 sm:pt-9 sm:pb-9')}
+          className={cx(
+            claseTarjeta,
+            ZOOM,
+            'mx-auto max-w-[760px] px-5 pt-7 pb-8 shadow-alta sm:px-10 sm:pt-10 sm:pb-10 md:hover:scale-[1.01] md:hover:shadow-[0_30px_60px_-20px_rgb(15_30_45/0.35)]'
+          )}
         >
           {contenido}
         </section>
@@ -355,9 +364,12 @@ const Postular = () => {
           </h2>
         </div>
 
-        <dl className={cx(claseTarjeta, 'm-0 grid grid-cols-2 divide-borde overflow-hidden sm:grid-cols-4 sm:divide-x')}>
+        <dl className={cx(claseTarjeta, 'm-0 grid grid-cols-2 divide-borde sm:grid-cols-4 sm:divide-x')}>
           {CIFRAS.map((c) => (
-            <div key={c.etiqueta} className="flex flex-col-reverse items-center px-3 py-6 text-center">
+            <div
+              key={c.etiqueta}
+              className={cx(ZOOM, 'flex flex-col-reverse items-center px-3 py-6 text-center hover:scale-105')}
+            >
               <dt className="text-[13px] text-tenue">{c.etiqueta}</dt>
               <dd className="m-0 mb-1 text-[2rem] leading-none font-bold text-acento">{c.valor}</dd>
             </div>
@@ -367,8 +379,14 @@ const Postular = () => {
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {VALORES.map(({ Icono, titulo, texto }) => (
-            <div key={titulo} className={cx(claseTarjeta, 'flex flex-col items-center px-6 py-9 text-center')}>
-              <span aria-hidden="true" className="mb-4 inline-flex size-[52px] items-center justify-center rounded-full bg-acento-suave text-xl text-acento">
+            <div
+              key={titulo}
+              className={cx(claseTarjeta, ZOOM, 'group flex flex-col items-center px-6 py-9 text-center hover:-translate-y-1.5 hover:scale-[1.03] hover:shadow-alta')}
+            >
+              <span
+                aria-hidden="true"
+                className="mb-4 inline-flex size-[52px] items-center justify-center rounded-full bg-acento-suave text-xl text-acento transition-[scale] duration-300 group-hover:scale-110 motion-reduce:transition-none"
+              >
                 <Icono />
               </span>
               <h3 className="mt-0 mb-2.5 text-lg font-bold text-titulo">{titulo}</h3>
