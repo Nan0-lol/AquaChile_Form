@@ -108,8 +108,8 @@ const LoginPage = () => {
 
   return (
     // El login siempre se ve en modo claro (todavía no se sabe qué tema prefiere la persona)
-    <section className="flex min-h-[560px] bg-cover bg-[center_right] bg-no-repeat" style={{ backgroundImage: `url('/FondoFormulario.png')` }}>
-      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-linear-100 from-[#1e2d38]/90 via-[#1e2d38]/72 to-[#1e2d38]/45 px-5 py-12">
+    <section className="relative flex min-h-[560px] bg-cover bg-[center_right] bg-no-repeat" style={{ backgroundImage: `url('/FondoFormulario.png')` }}>
+      <div className="flex flex-1 flex-col items-center justify-center gap-5 bg-linear-100 from-[#1e2d38]/90 via-[#1e2d38]/72 to-[#1e2d38]/45 px-5 pt-28 pb-16">
         <div className="w-full max-w-[420px] animate-aparecer rounded-xl bg-white px-6 pt-8 pb-6 text-slate-800 shadow-[0_30px_60px_-15px_rgb(0_0_0/0.45)] sm:px-10 sm:pt-10 sm:pb-8">
           <div className="mx-auto mb-[18px] flex size-[52px] items-center justify-center rounded-full bg-[#197aa8]/8 text-[#197aa8]">
             <IconoCandado />
@@ -204,6 +204,10 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
+      {/* Pie discreto sobre la foto (el sistema es de uso interno) */}
+      <p className="absolute inset-x-0 bottom-0 m-0 px-5 py-4 text-center text-[0.8rem] text-white/75">
+        © {new Date().getFullYear()} AquaChile · Sistema de Evaluaciones Psicolaborales · Uso interno
+      </p>
     </section>
   );
 };
