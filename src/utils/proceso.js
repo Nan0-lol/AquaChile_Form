@@ -89,11 +89,17 @@ export const diaLocal = (valor) => {
  * Filtra solicitudes en el navegador (la lista completa ya está cargada).
  * filtros: { etapa, familiaCargo, responsable ('' | 'sin' | id), q, desde, hasta }
  */
+// "En proceso" (uno de los 3 estados del caso) junta dos etapas reales
+export const ETAPAS_EN_PROCESO = ['agendada', 'realizada'];
+
+/** etapa puede ser una etapa real o 'en_proceso' (agendada + realizada) */
 export const filtrarSolicitudes = (lista = [], filtros = {}) => {
   const { etapa, familiaCargo, responsable, q, desde, hasta } = filtros;
   const busqueda = normalizar(q);
   return lista.filter((s) => {
-    if (etapa && s.etapa !== etapa) return false;
+    if (etapa === 'en_proceso') {
+      if (!ETAPAS_EN_PROCESO.includes(s.etapa)) return false;
+    } else if (etapa && s.etapa !== etapa) return false;
     if (familiaCargo && s.familiaCargo !== familiaCargo) return false;
     if (responsable === 'sin' && s.evaluador) return false;
     if (responsable && responsable !== 'sin' && s.evaluador?.id !== responsable) return false;

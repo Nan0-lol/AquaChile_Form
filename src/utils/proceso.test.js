@@ -93,6 +93,9 @@ describe('Fechas de la evaluación', () => {
 describe('Filtros de la lista', () => {
   test('por etapa, familia y responsable (incluye "sin asignar")', () => {
     expect(filtrarSolicitudes(LISTA, { etapa: 'agendada' }).map((s) => s.id)).toEqual(['s2']);
+    // "En proceso" del Panel = agendada + realizada
+    expect(filtrarSolicitudes(LISTA, { etapa: 'en_proceso' }).every((s) => ['agendada', 'realizada'].includes(s.etapa))).toBe(true);
+    expect(filtrarSolicitudes(LISTA, { etapa: 'en_proceso' }).length).toBe(LISTA.filter((s) => ['agendada', 'realizada'].includes(s.etapa)).length);
     expect(filtrarSolicitudes(LISTA, { familiaCargo: 'jefatura' })).toHaveLength(1);
     expect(filtrarSolicitudes(LISTA, { responsable: 'sin' }).map((s) => s.id)).toEqual(['s1']);
     expect(filtrarSolicitudes(LISTA, { responsable: 'ev2' }).map((s) => s.id)).toEqual(['s3']);

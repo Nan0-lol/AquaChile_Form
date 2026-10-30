@@ -318,7 +318,14 @@ const Dashboard = () => {
           tono="pendiente"
           onAbrir={() => irALista({ etapa: 'recibida' })}
         />
-        <Indicador titulo="En proceso" valor={d.enProceso} detalle="Con entrevista agendada o realizada" Icono={FaSpinner} tono="proceso" />
+        <Indicador
+          titulo="En proceso"
+          valor={d.enProceso}
+          detalle="Con entrevista agendada o realizada"
+          Icono={FaSpinner}
+          tono="proceso"
+          onAbrir={() => irALista({ etapa: 'en_proceso' })}
+        />
         <Indicador
           titulo="Finalizadas"
           valor={d.finalizadas}

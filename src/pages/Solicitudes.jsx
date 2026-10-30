@@ -4,6 +4,7 @@ import { FaSearch, FaPlus, FaFileExcel, FaTimes, FaUserCheck } from 'react-icons
 import { listarSolicitudes, obtenerCatalogos, obtenerEvaluadores, ErrorApi } from '../services/api';
 import {
   ORDEN_ETAPAS,
+  ETAPAS_EN_PROCESO,
   filtrarSolicitudes,
   contarPorEtapa,
   formatearFecha,
@@ -248,7 +249,8 @@ const Solicitudes = () => {
         {/* ---------- Pestañas por etapa (se deslizan en pantallas chicas) ---------- */}
         <div role="group" aria-label="Filtrar por etapa" className="mt-4 flex gap-1 overflow-x-auto overflow-y-hidden border-b border-borde px-3.5 [scrollbar-width:thin]">
           {['', ...ORDEN_ETAPAS].map((etapa) => {
-            const activa = filtros.etapa === etapa;
+            // Desde el Panel, "En proceso" marca a la vez "agendada" y "realizada"
+            const activa = filtros.etapa === etapa || (filtros.etapa === 'en_proceso' && ETAPAS_EN_PROCESO.includes(etapa));
             return (
               <button
                 key={etapa || 'todas'}
