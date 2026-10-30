@@ -3,14 +3,12 @@ import { FaCheckCircle, FaLeaf, FaLightbulb, FaMapMarkerAlt, FaArrowRight } from
 import { obtenerOpcionesPublicas, enviarPostulacion, ErrorApi } from '../services/api';
 import { formatearCelular } from '../utils/solicitud';
 import {
-  MAX_CARTA,
   POSTULACION_INICIAL,
   CAMPOS_POSTULACION,
   validarCampoPostulacion,
   validarPostulacionCompleta,
   validarCvPdf,
   construirFormDataPostulacion,
-  formatearRut,
 } from '../utils/postulacion';
 import {
   cx,
@@ -20,14 +18,11 @@ import {
   Selector,
   EntradaCelular,
   Asterisco,
-  Opcional,
   MensajeError,
-  Contador,
   Alerta,
   Cargando,
   ErrorCarga,
   claseEntrada,
-  claseEtiqueta,
   claseTarjeta,
 } from '../components/ui';
 import ZonaArchivo from '../components/ZonaArchivo';
@@ -39,6 +34,10 @@ import ZonaArchivo from '../components/ZonaArchivo';
 // La persona SOLO envía sus datos y su CV: no ve nada más del sistema.
 // Lo que envía llega a la bandeja "Postulaciones" del analista.
 // =====================================================================
+
+// Efecto "zoom" al pasar el mouse (como el formulario original). Se desactiva si la
+// persona pidió menos animaciones en su sistema (motion-reduce).
+const ZOOM = 'transition-[scale,translate,box-shadow] duration-300 ease-out motion-reduce:transition-none';
 
 // Cifras del Reporte Integrado AquaChile 2024 (actualízalas cuando salga el reporte siguiente)
 const CIFRAS = [
@@ -83,8 +82,11 @@ const Postular = () => {
   useEffect(() => {
     const anterior = document.title;
     document.title = 'Postula · AquaChile';
+    // En esta página se oculta la barra de desplazamiento (se sigue bajando igual)
+    document.documentElement.classList.add('sin-barra');
     return () => {
       document.title = anterior;
+      document.documentElement.classList.remove('sin-barra');
     };
   }, []);
 
@@ -108,7 +110,6 @@ const Postular = () => {
   const salir = (campo) => {
     const valor = valores[campo];
     if (campo === 'telefono' && valor.trim()) cambiar('telefono', formatearCelular(valor));
-    if (campo === 'rut' && valor.trim()) cambiar('rut', formatearRut(valor));
     setErrores((prev) => ({ ...prev, [campo]: validarCampoPostulacion(campo, valor) }));
   };
 
@@ -214,11 +215,8 @@ const Postular = () => {
         {/* noValidate: usamos nuestros mensajes (el navegador no puede enfocar el input de archivo oculto) */}
         <form onSubmit={enviar} noValidate className="flex flex-col gap-[18px]">
           <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] sm:grid-cols-2">
-            <Campo id="nombre" etiqueta="Nombre completo" obligatorio error={errores.nombre}>
+            <Campo id="nombre" etiqueta="Nombre completo" obligatorio error={errores.nombre} className="sm:col-span-2">
               <input type="text" autoComplete="name" maxLength={100} {...propsCampo('nombre')} />
-            </Campo>
-            <Campo id="rut" etiqueta="RUT" obligatorio error={errores.rut}>
-              <input type="text" placeholder="12.345.678-9" maxLength={12} autoComplete="off" {...propsCampo('rut')} />
             </Campo>
             <Campo id="correo" etiqueta="Correo electrónico" obligatorio error={errores.correo}>
               <input type="email" autoComplete="email" maxLength={254} {...propsCampo('correo')} />
@@ -238,23 +236,6 @@ const Postular = () => {
               ))}
             </Selector>
           </Campo>
-
-          <div className="flex min-w-0 flex-col">
-            <label htmlFor="carta" className={claseEtiqueta}>
-              Carta de presentación <Opcional />
-            </label>
-            <textarea
-              rows={4}
-              maxLength={MAX_CARTA}
-              {...propsCampo('carta', 'min-h-[110px] resize-y px-3 py-2.5 text-[14.5px] leading-normal')}
-            />
-            {valores.carta.length > MAX_CARTA * 0.8 && (
-              <div className="flex justify-end">
-                <Contador largo={valores.carta.length} maximo={MAX_CARTA} />
-              </div>
-            )}
-            <MensajeError id="carta-error" texto={errores.carta} />
-          </div>
 
           <ZonaArchivo
             id="cv"
@@ -299,14 +280,15 @@ const Postular = () => {
           </div>
 
           {errorEnvio && <Alerta>{errorEnvio}</Alerta>}
-          <Boton type="submit" tamano="lg" disabled={enviando} className="w-full">
+          <Boton type="submit" tamano="lg" disabled={enviando} className="group w-full">
             {enviando ? (
               <>
                 <Spinner /> Enviando…
               </>
             ) : (
               <>
-                Enviar postulación <FaArrowRight aria-hidden="true" className="text-sm" />
+                Enviar postulación{' '}
+                <FaArrowRight aria-hidden="true" className="text-sm transition-[translate] duration-200 group-hover:translate-x-1" />
               </>
             )}
           </Boton>
@@ -316,11 +298,13 @@ const Postular = () => {
   }
 
   return (
-    <div className="flex flex-col bg-fondo">
+    // Fondo celeste casi blanco: hace que la caja blanca del formulario resalte limpio
+    <div className="flex flex-col bg-[#eaf4fb]">
       {/* ---------- 1. Portada ---------- */}
-      <section className="bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/FondoFormulario.png')` }}>
+      <section className="bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/FondoLogin.png')` }}>
         <div className="bg-linear-100 from-[#1e2d38]/92 via-[#1e2d38]/75 to-[#1e2d38]/45 px-5 pt-14 pb-32 sm:pt-20 sm:pb-36">
-          <div className="mx-auto max-w-[1000px] text-white">
+          {/* Mismo ancho que la caja del formulario: el texto y la caja parten en la misma línea */}
+          <div className="mx-auto max-w-[760px] text-white">
             <span className="inline-block rounded-full bg-white/14 px-3 py-1 text-xs font-bold tracking-[0.08em] uppercase">
               Trabaja en AquaChile
             </span>
@@ -340,7 +324,11 @@ const Postular = () => {
       <div className="relative -mt-20 px-4">
         <section
           aria-label="Formulario de postulación"
-          className={cx(claseTarjeta, 'mx-auto max-w-[760px] px-5 pt-7 pb-8 shadow-alta sm:px-10 sm:pt-10 sm:pb-10')}
+          className={cx(
+            claseTarjeta,
+            ZOOM,
+            'mx-auto max-w-[760px] px-5 pt-7 pb-8 shadow-alta sm:px-10 sm:pt-10 sm:pb-10 md:hover:scale-[1.01] md:hover:shadow-[0_30px_60px_-20px_rgb(15_30_45/0.35)]'
+          )}
         >
           {contenido}
         </section>
@@ -355,9 +343,12 @@ const Postular = () => {
           </h2>
         </div>
 
-        <dl className={cx(claseTarjeta, 'm-0 grid grid-cols-2 divide-borde overflow-hidden sm:grid-cols-4 sm:divide-x')}>
+        <dl className={cx(claseTarjeta, 'm-0 grid grid-cols-2 divide-borde sm:grid-cols-4 sm:divide-x')}>
           {CIFRAS.map((c) => (
-            <div key={c.etiqueta} className="flex flex-col-reverse items-center px-3 py-6 text-center">
+            <div
+              key={c.etiqueta}
+              className={cx(ZOOM, 'flex flex-col-reverse items-center px-3 py-6 text-center hover:scale-105')}
+            >
               <dt className="text-[13px] text-tenue">{c.etiqueta}</dt>
               <dd className="m-0 mb-1 text-[2rem] leading-none font-bold text-acento">{c.valor}</dd>
             </div>
@@ -367,8 +358,14 @@ const Postular = () => {
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {VALORES.map(({ Icono, titulo, texto }) => (
-            <div key={titulo} className={cx(claseTarjeta, 'flex flex-col items-center px-6 py-9 text-center')}>
-              <span aria-hidden="true" className="mb-4 inline-flex size-[52px] items-center justify-center rounded-full bg-acento-suave text-xl text-acento">
+            <div
+              key={titulo}
+              className={cx(claseTarjeta, ZOOM, 'group flex flex-col items-center px-6 py-9 text-center hover:-translate-y-1.5 hover:scale-[1.03] hover:shadow-alta')}
+            >
+              <span
+                aria-hidden="true"
+                className="mb-4 inline-flex size-[52px] items-center justify-center rounded-full bg-acento-suave text-xl text-acento transition-[scale] duration-300 group-hover:scale-110 motion-reduce:transition-none"
+              >
                 <Icono />
               </span>
               <h3 className="mt-0 mb-2.5 text-lg font-bold text-titulo">{titulo}</h3>

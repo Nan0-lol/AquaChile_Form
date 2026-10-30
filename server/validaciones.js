@@ -23,7 +23,6 @@ const REGEX_FECHA_HORA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
 export const LIMITES = {
   aspectosIndagar: 2000,
   observaciones: 5000,
-  carta: 3000,
 };
 
 const texto = (valor) => (typeof valor === 'string' ? valor.trim() : '');
@@ -152,37 +151,8 @@ export function validarSolicitud(body = {}, { parcial = false } = {}) {
 }
 
 // ---------------------------------------------------------------------
-// RUT chileno (módulo 11)
-// ---------------------------------------------------------------------
-const limpiarRut = (rut = '') => String(rut).replace(/[^0-9kK]/g, '').toUpperCase();
-
-export function rutEsValido(rut = '') {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 8 || limpio.length > 9) return false;
-  const cuerpo = limpio.slice(0, -1);
-  const dv = limpio.slice(-1);
-  if (!/^\d+$/.test(cuerpo)) return false;
-  let suma = 0;
-  let multiplo = 2;
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * multiplo;
-    multiplo = multiplo === 7 ? 2 : multiplo + 1;
-  }
-  const resto = 11 - (suma % 11);
-  const esperado = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
-  return dv === esperado;
-}
-
-/** 12345678k -> 12.345.678-K */
-export function formatearRut(rut = '') {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 2) return limpio;
-  return `${limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${limpio.slice(-1)}`;
-}
-
-// ---------------------------------------------------------------------
 // POSTULACIÓN (formulario público: lo llena la misma persona que postula)
-// Campos: nombre, RUT, correo, teléfono, área de interés, carta (opcional) y CV.
+// Campos: nombre, correo, teléfono, área de interés y CV.
 // ---------------------------------------------------------------------
 export function validarPostulacion(body = {}) {
   const contacto = validarCandidato(
@@ -192,22 +162,9 @@ export function validarPostulacion(body = {}) {
   const errores = { ...contacto.errores };
   const datos = { ...contacto.datos };
 
-  const rut = texto(body.rut);
-  if (rutEsValido(rut)) datos.rut = formatearRut(rut);
-  else {
-    errores.rut = 'El RUT no es válido. Revisa el dígito verificador.';
-    datos.rut = rut;
-  }
-
   const area = texto(body.area);
   if (!esClave(AREAS_INTERES, area)) errores.area = 'Selecciona un área de interés.';
   datos.area = area;
-
-  const carta = texto(body.carta);
-  if (carta.length > LIMITES.carta || REGEX_CONTROL_MULTILINEA.test(carta)) {
-    errores.carta = `La carta de presentación puede tener hasta ${LIMITES.carta} caracteres.`;
-  }
-  datos.carta = carta;
 
   if (!aBooleano(body.consentimiento)) {
     errores.consentimiento = 'Debes aceptar el tratamiento de tus datos para postular.';

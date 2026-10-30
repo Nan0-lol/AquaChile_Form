@@ -81,14 +81,11 @@ const CASOS = [
 ];
 
 // Lo que llegó por el formulario público y aún nadie revisa (horasAtras = cuándo llegó)
-// RUT inventados (válidos solo para que pasen la verificación del dígito)
 const POSTULACIONES = [
-  { nombre: 'Camila Henríquez', rut: '15.234.876-2', area: 'piscicultura', horasAtras: 5,
-    carta: 'Soy técnica en acuicultura y me interesa trabajar en pisciculturas del sur. Tengo experiencia en monitoreo de calidad de agua (dato inventado).' },
-  { nombre: 'Diego Fuentealba', rut: '17.890.123-0', area: 'planta', horasAtras: 28, carta: '' },
-  { nombre: 'Fernanda Soto', rut: '19.345.678-2', area: 'administracion', horasAtras: 52,
-    carta: 'Ingeniera comercial con interés en control de gestión. Disponible de inmediato (dato inventado).' },
-  { nombre: 'Cristóbal Muñoz', rut: '20.456.789-1', area: 'comercial', horasAtras: 120, carta: '', estado: 'descartada' },
+  { nombre: 'Camila Henríquez', area: 'piscicultura', horasAtras: 5 },
+  { nombre: 'Diego Fuentealba', area: 'planta', horasAtras: 28 },
+  { nombre: 'Fernanda Soto', area: 'administracion', horasAtras: 52 },
+  { nombre: 'Cristóbal Muñoz', area: 'comercial', horasAtras: 120, estado: 'descartada' },
 ];
 
 const sinTildes = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -126,11 +123,9 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
       const cv = crearCv(p.nombre, 'Postulación web');
       const id = repo.postulaciones.crear({
         nombre: p.nombre,
-        rut: p.rut,
         correo: correoDe(p.nombre),
         telefono: `+5699100${String(1001 + i).padStart(4, '0')}`,
         area: p.area,
-        carta: p.carta,
         cvArchivo: cv.archivo,
         cvNombreOriginal: cv.nombreOriginal,
         cvBytes: cv.bytes,

@@ -96,11 +96,9 @@ const ESQUEMA = `
   CREATE TABLE IF NOT EXISTS postulaciones (
     id                  TEXT PRIMARY KEY,
     nombre              TEXT NOT NULL,
-    rut                 TEXT NOT NULL,
     correo              TEXT NOT NULL,
     telefono            TEXT NOT NULL,
     area                TEXT NOT NULL,
-    carta               TEXT NOT NULL DEFAULT '',
     cv_archivo          TEXT NOT NULL,
     cv_nombre_original  TEXT NOT NULL,
     cv_bytes            INTEGER NOT NULL,
@@ -159,10 +157,10 @@ export function crearRepositorio(ruta) {
 
   const db = new DatabaseSync(rutaFinal);
   db.exec('PRAGMA foreign_keys = ON;'); // activa las relaciones (y el borrado en cascada)
-  // Una versión de prueba anterior creó "postulaciones" con otros campos: se rehace
+  // Versiones de prueba anteriores crearon "postulaciones" con otros campos: se rehace
   // (solo tenía datos ficticios de demostración)
-  const columnasPostulacion = db.prepare('PRAGMA table_info(postulaciones)').all();
-  if (columnasPostulacion.length && !columnasPostulacion.some((c) => c.name === 'rut')) {
+  const columnasPostulacion = db.prepare('PRAGMA table_info(postulaciones)').all().map((c) => c.name);
+  if (columnasPostulacion.length && (columnasPostulacion.includes('rut') || !columnasPostulacion.includes('area'))) {
     db.exec('DROP TABLE postulaciones');
   }
   db.exec(ESQUEMA);
@@ -444,10 +442,10 @@ export function crearRepositorio(ruta) {
     crear(p) {
       const id = nuevoId();
       q(`INSERT INTO postulaciones (
-           id, nombre, rut, correo, telefono, area, carta,
+           id, nombre, correo, telefono, area,
            cv_archivo, cv_nombre_original, cv_bytes, creado_en
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-        id, p.nombre, p.rut, p.correo, p.telefono, p.area, p.carta ?? '',
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+        id, p.nombre, p.correo, p.telefono, p.area,
         p.cvArchivo, p.cvNombreOriginal, p.cvBytes, p.creadoEn ?? ahoraIso()
       );
       return id;
@@ -455,7 +453,7 @@ export function crearRepositorio(ruta) {
     obtener(id) {
       return q(`${SELECT_POSTULACION} WHERE p.id = ?`).get(id) ?? null;
     },
-    /** Filtros opcionales: estado y q (nombre, correo o RUT) */
+    /** Filtros opcionales: estado y q (nombre o correo) */
     listar({ estado, q: busqueda } = {}) {
       const condiciones = [];
       const valores = [];
@@ -465,8 +463,8 @@ export function crearRepositorio(ruta) {
       }
       if (busqueda) {
         const patron = `%${busqueda.toLowerCase()}%`;
-        condiciones.push('(lower(p.nombre) LIKE ? OR lower(p.correo) LIKE ? OR lower(p.rut) LIKE ?)');
-        valores.push(patron, patron, patron);
+        condiciones.push('(lower(p.nombre) LIKE ? OR lower(p.correo) LIKE ?)');
+        valores.push(patron, patron);
       }
       const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
       return q(`${SELECT_POSTULACION} ${where} ORDER BY p.creado_en DESC`).all(...valores);

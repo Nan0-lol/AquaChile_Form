@@ -12,7 +12,6 @@ import {
   FaEnvelope,
   FaPhone,
   FaUserCheck,
-  FaIdCard,
 } from 'react-icons/fa';
 import {
   listarPostulaciones,
@@ -185,7 +184,7 @@ const Postulaciones = () => {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar por nombre, correo o RUT"
+              placeholder="Buscar por nombre o correo"
               autoComplete="off"
               className="h-full min-w-0 flex-1 border-0 bg-transparent text-[14.5px] text-texto outline-none placeholder:text-sutil"
             />
@@ -224,7 +223,7 @@ const Postulaciones = () => {
         {visibles.length === 0 ? (
           <Vacio
             titulo={q ? 'Sin resultados' : estado === 'nueva' ? 'No hay postulaciones por revisar' : 'No hay postulaciones aquí'}
-            texto={q ? 'Prueba con otro nombre, correo o RUT.' : 'Cuando alguien postule en el formulario público, aparecerá en esta lista.'}
+            texto={q ? 'Prueba con otro nombre o correo.' : 'Cuando alguien postule en el formulario público, aparecerá en esta lista.'}
           />
         ) : (
           <ul className="m-0 list-none divide-y divide-borde p-0">
@@ -241,9 +240,6 @@ const Postulaciones = () => {
                         Área de interés: <span className="font-semibold">{area(p)}</span>
                       </p>
                       <p className="mt-1 mb-0 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-tenue">
-                        <span className="inline-flex items-center gap-1.5">
-                          <FaIdCard aria-hidden="true" className="text-sutil" /> {p.rut}
-                        </span>
                         <span className="inline-flex min-w-0 items-center gap-1.5 [overflow-wrap:anywhere]">
                           <FaEnvelope aria-hidden="true" className="shrink-0 text-sutil" /> {p.correo}
                         </span>
@@ -252,17 +248,6 @@ const Postulaciones = () => {
                         </span>
                         <span title={formatearFecha(p.creadoEn)}>Llegó: {hace(p.creadoEn).toLowerCase()}</span>
                       </p>
-                      {p.carta && (
-                        <details className="group mt-2">
-                          <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-[13px] font-semibold text-acento outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento">
-                            <span className="group-open:hidden">Ver carta de presentación</span>
-                            <span className="hidden group-open:inline">Ocultar carta</span>
-                          </summary>
-                          <p className="mt-2 mb-0 rounded-lg bg-superficie-2 px-3.5 py-3 text-sm leading-relaxed whitespace-pre-line text-texto [overflow-wrap:anywhere]">
-                            {p.carta}
-                          </p>
-                        </details>
-                      )}
                       {p.estado === 'nueva' && p.candidatoId && (
                         <p className="mt-1.5 mb-0 inline-flex items-center gap-1.5 text-[12.5px] text-tenue">
                           <FaUserCheck aria-hidden="true" className="text-acento" />

@@ -213,3 +213,11 @@
     }
   }
 }
+
+/* Página pública /postular: barra de desplazamiento oculta (la rueda, el touchpad y el dedo siguen funcionando) */
+html.sin-barra {
+  scrollbar-width: none;
+}
+html.sin-barra::-webkit-scrollbar {
+  display: none;
+}

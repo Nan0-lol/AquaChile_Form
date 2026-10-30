@@ -502,8 +502,7 @@ const NuevaSolicitud = () => {
         <p role="note" className="mt-0 mb-5 flex items-start gap-3 rounded-xl border border-acento bg-acento-suave px-4 py-3.5 text-sm leading-relaxed text-texto">
           <FaInbox aria-hidden="true" className="mt-0.5 shrink-0 text-acento" />
           <span>
-            Viene de la <strong>postulación web de {postulacion.nombre}</strong> ({hace(postulacion.creadoEn).toLowerCase()}) · RUT{' '}
-            {postulacion.rut} · Área de interés: {catalogos.areasInteres?.[postulacion.area] ?? postulacion.area}. Ya cargamos
+            Viene de la <strong>postulación web de {postulacion.nombre}</strong> ({hace(postulacion.creadoEn).toLowerCase()}) · Área de interés: {catalogos.areasInteres?.[postulacion.area] ?? postulacion.area}. Ya cargamos
             sus datos de contacto y su CV: completa el origen, el cargo y el proceso.
           </span>
         </p>

@@ -1,8 +1,8 @@
 // =====================================================================
 // SERVICIO DE POSTULACIONES (formulario público /postular)
 // Flujo:
-//   1. La persona postula desde la página pública (sin cuenta): nombre, RUT,
-//      correo, teléfono, área de interés, carta de presentación (opcional) y su CV en PDF.
+//   1. La persona postula desde la página pública (sin cuenta): nombre, correo,
+//      teléfono, área de interés y su CV en PDF.
 //   2. Queda "Por revisar" en la bandeja del analista.
 //   3. El analista la revisa y:
 //        - la pasa a evaluación → se crea la solicitud con esos datos y el CV, o

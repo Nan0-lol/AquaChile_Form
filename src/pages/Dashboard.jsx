@@ -15,9 +15,7 @@ import {
   FaEnvelopeOpenText,
 } from 'react-icons/fa';
 import { obtenerIndicadores, listarSolicitudes, obtenerCatalogos, ErrorApi } from '../services/api';
-import { estadoGeneral, formatearFecha } from '../utils/proceso';
 import { puede } from '../auth';
-import { EtapaBadge } from '../components/Proceso';
 import { cx, FOCO, Boton, Avatar, Pagina, Titulo, Cargando, ErrorCarga, claseTarjeta } from '../components/ui';
 
 // =====================================================================
@@ -206,15 +204,21 @@ const Barras = ({ filas, total, escala }) => {
   );
 };
 
-const Tarjeta = ({ titulo, subtitulo, className, children }) => (
+const Tarjeta = ({ titulo, subtitulo, accion, className, children }) => (
   <section className={cx(claseTarjeta, className)}>
-    <header className="px-4 pt-[18px] sm:px-5">
-      <h2 className="m-0 text-[1.02rem] font-bold text-titulo">{titulo}</h2>
-      {subtitulo && <p className="mt-[3px] mb-0 text-[13px] text-tenue">{subtitulo}</p>}
+    <header className="flex flex-wrap items-start justify-between gap-3 px-4 pt-[18px] sm:px-5">
+      <div>
+        <h2 className="m-0 text-[1.02rem] font-bold text-titulo">{titulo}</h2>
+        {subtitulo && <p className="mt-[3px] mb-0 text-[13px] text-tenue">{subtitulo}</p>}
+      </div>
+      {accion}
     </header>
     <div className="px-4 pt-4 pb-5 sm:px-5">{children}</div>
   </section>
 );
+
+// Aviso clickeable de "Requiere atención"
+const CLASE_AVISO = cx('flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] px-3.5 py-[11px] text-left text-sm hover:brightness-97', FOCO);
 
 const SinDatos = ({ children }) => <p className="my-2 text-sm text-tenue">{children}</p>;
 
@@ -255,7 +259,7 @@ const Dashboard = () => {
       solicitudes
         .filter((s) => s.etapa !== 'informe_enviado')
         .sort((a, b) => new Date(a.fechaSolicitud) - new Date(b.fechaSolicitud))
-        .slice(0, 5),
+        .slice(0, 4),
     [solicitudes]
   );
 
@@ -278,7 +282,7 @@ const Dashboard = () => {
   const d = datos;
   const totalResultados = d.porResultado.reduce((a, r) => a + r.cantidad, 0);
   const familias = d.porFamilia.filter((f) => f.cantidad > 0);
-  const maxEtapa = Math.max(...d.porEtapa.map((e) => e.cantidad));
+  const hayPostulaciones = puede('postulacion:ver') && d.postulacionesPorRevisar > 0;
   const diasEsperando = (s) => Math.max(0, Math.floor((Date.now() - new Date(s.fechaSolicitud)) / DIA_MS));
 
   return (
@@ -296,29 +300,8 @@ const Dashboard = () => {
         {actualizado && <> · actualizado a las {actualizado.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}</>}
       </Titulo>
 
-      {/* ================= POSTULACIONES WEB POR REVISAR ================= */}
-      {puede('postulacion:ver') && d.postulacionesPorRevisar > 0 && (
-        <Link
-          to="/postulaciones"
-          className={cx(
-            'mb-5 flex items-center gap-3 rounded-[14px] border border-acento bg-acento-suave px-4 py-3.5 text-texto no-underline transition-colors hover:brightness-97 sm:px-5',
-            FOCO
-          )}
-        >
-          <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-superficie text-lg text-acento">
-            <FaEnvelopeOpenText />
-          </span>
-          <span className="min-w-0 flex-1 text-sm leading-snug">
-            <strong className="text-base">{plural(d.postulacionesPorRevisar, 'postulación web', 'postulaciones web')}</strong> por revisar
-            <span className="block text-[13px] text-tenue">Llegaron desde el formulario público. Revísalas y pásalas a evaluación.</span>
-          </span>
-          <span className="hidden shrink-0 text-sm font-semibold text-acento sm:inline">Revisar</span>
-          <FaChevronRight aria-hidden="true" className="shrink-0 text-xs text-acento" />
-        </Link>
-      )}
-
-      {/* ================= INDICADORES PRINCIPALES ================= */}
-      <section aria-label="Indicadores principales" className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-5">
+      {/* ================= 1. RESUMEN: los 4 indicadores que pide el caso ================= */}
+      <section aria-label="Resumen" className="mb-5 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <Indicador
           titulo="Candidatos registrados"
           valor={d.totalCandidatos}
@@ -330,63 +313,103 @@ const Dashboard = () => {
         <Indicador
           titulo="Pendientes"
           valor={d.pendientes}
-          detalle="Evaluación recibida, por agendar"
+          detalle="Recibidas, por agendar"
           Icono={FaInbox}
           tono="pendiente"
           onAbrir={() => irALista({ etapa: 'recibida' })}
         />
-        <Indicador titulo="En proceso" valor={d.enProceso} detalle="Entrevista agendada o realizada" Icono={FaSpinner} tono="proceso" />
+        <Indicador titulo="En proceso" valor={d.enProceso} detalle="Con entrevista agendada o realizada" Icono={FaSpinner} tono="proceso" />
         <Indicador
           titulo="Finalizadas"
           valor={d.finalizadas}
-          detalle="Informe enviado al analista"
+          detalle="Con informe enviado"
           Icono={FaCheckCircle}
           tono="final"
           onAbrir={() => irALista({ etapa: 'informe_enviado' })}
         />
-        <Indicador
-          titulo="Timing promedio"
-          valor={d.timingPromedioDias === null ? '—' : d.timingPromedioDias.toLocaleString('es-CL')}
-          unidad={d.timingPromedioDias === null ? '' : 'días'}
-          detalle={
-            d.informesConTiming
-              ? `De la solicitud al informe · ${plural(d.informesConTiming, 'informe', 'informes')}`
-              : 'Aparece con el primer informe enviado'
-          }
-          Icono={FaStopwatch}
-          tono="neutro"
-          className="col-span-2 lg:col-span-1"
-        />
       </section>
 
+      {/* ================= 2. REQUIERE ATENCIÓN: lo que hay que hacer hoy ================= */}
+      <Tarjeta titulo="Requiere atención" subtitulo="Lo que conviene resolver primero" className="mb-5">
+        {(hayPostulaciones || d.sinResponsable > 0) && (
+          <div className="mb-4 grid grid-cols-1 gap-2.5 md:grid-cols-2">
+            {hayPostulaciones && (
+              <Link to="/postulaciones" className={cx(CLASE_AVISO, 'bg-acento-suave text-acento no-underline')}>
+                <FaEnvelopeOpenText aria-hidden="true" className="shrink-0" />
+                <span className="flex-1">
+                  <strong>{plural(d.postulacionesPorRevisar, 'postulación web', 'postulaciones web')}</strong> por revisar
+                </span>
+                <FaChevronRight aria-hidden="true" className="text-[11px]" />
+              </Link>
+            )}
+            {d.sinResponsable > 0 && (
+              <button type="button" onClick={() => irALista({ responsable: 'sin' })} className={cx(CLASE_AVISO, 'bg-e-recibida-bg text-e-recibida')}>
+                <FaExclamationCircle aria-hidden="true" className="shrink-0" />
+                <span className="flex-1">
+                  <strong>{d.sinResponsable}</strong> {d.sinResponsable === 1 ? 'solicitud sin' : 'solicitudes sin'} profesional responsable
+                </span>
+                <FaChevronRight aria-hidden="true" className="text-[11px]" />
+              </button>
+            )}
+          </div>
+        )}
+        <p className="mt-0 mb-2.5 text-xs font-bold tracking-[0.04em] text-sutil uppercase">En curso hace más tiempo</p>
+        {enEspera.length ? (
+          <ul className="m-0 grid list-none grid-cols-1 gap-2 p-0 md:grid-cols-2">
+            {enEspera.map((s) => (
+              <li key={s.id} className="min-w-0">
+                <Link
+                  to={`/solicitudes/${s.id}`}
+                  className={cx(
+                    'flex items-center gap-3 rounded-[10px] border border-borde px-3 py-2.5 text-texto no-underline transition-colors hover:border-acento hover:bg-acento-suave',
+                    FOCO
+                  )}
+                >
+                  <Avatar nombre={s.candidato.nombre} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <strong className="truncate text-sm">{s.candidato.nombre}</strong>
+                    <span className="truncate text-[12.5px] text-tenue">
+                      {s.nombreCargo} · {catalogos.etapas[s.etapa]}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-base font-bold text-texto tabular-nums">
+                    {diasEsperando(s)} <small className="text-xs font-medium text-sutil">{diasEsperando(s) === 1 ? 'día' : 'días'}</small>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <SinDatos>No hay solicitudes en curso. ¡Todo al día!</SinDatos>
+        )}
+      </Tarjeta>
+
+      {/* ================= 3. TENDENCIA ================= */}
+      <Tarjeta
+        titulo="Evaluaciones por mes"
+        subtitulo="Últimos 6 meses"
+        className="mb-5"
+        accion={
+          <div className="text-right">
+            <span className="block text-xs font-semibold text-tenue">
+              <FaStopwatch aria-hidden="true" className="mr-1 inline align-[-1px]" /> Timing promedio
+            </span>
+            <strong className="text-xl text-titulo tabular-nums">
+              {d.timingPromedioDias === null ? '—' : `${d.timingPromedioDias.toLocaleString('es-CL')} días`}
+            </strong>
+            <span className="block text-[11.5px] text-sutil">de la solicitud al informe</span>
+          </div>
+        }
+      >
+        <GraficoMeses meses={d.porMes} />
+      </Tarjeta>
+
+      {/* ================= 4. DETALLE ================= */}
       <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
-        {/* ================= POR MES ================= */}
-        <Tarjeta titulo="Evaluaciones por mes" subtitulo="Últimos 6 meses" className="md:col-span-2">
-          <GraficoMeses meses={d.porMes} />
-        </Tarjeta>
-
-        {/* ================= ESTADO DEL PROCESO ================= */}
-        <Tarjeta titulo="Estado del proceso" subtitulo="Las 4 etapas agrupadas en los 3 estados del caso">
-          {['Pendiente', 'En proceso', 'Finalizada'].map((estado) => {
-            const filas = d.porEtapa.filter((e) => estadoGeneral(e.clave) === estado);
-            const suma = filas.reduce((a, f) => a + f.cantidad, 0);
-            return (
-              <div key={estado} className="[&+&]:mt-4 [&+&]:border-t [&+&]:border-dashed [&+&]:border-borde [&+&]:pt-3.5">
-                <p className="mt-0 mb-2 flex justify-between text-xs font-bold tracking-[0.04em] text-sutil uppercase">
-                  {estado} <span className="text-texto">{suma}</span>
-                </p>
-                <Barras filas={filas} total={d.totalSolicitudes} escala={maxEtapa} />
-              </div>
-            );
-          })}
-        </Tarjeta>
-
-        {/* ================= FAMILIAS ================= */}
         <Tarjeta titulo="Por familia de cargo" subtitulo="Todas las solicitudes registradas">
           {familias.length ? <Barras filas={familias} total={d.totalSolicitudes} /> : <SinDatos>Todavía no hay solicitudes.</SinDatos>}
         </Tarjeta>
 
-        {/* ================= RESULTADOS ================= */}
         <Tarjeta titulo="Resultados de las evaluaciones" subtitulo={plural(totalResultados, 'informe enviado', 'informes enviados')}>
           {totalResultados ? (
             <ul className="m-0 flex list-none flex-col gap-4 p-0">
@@ -409,54 +432,6 @@ const Dashboard = () => {
             </ul>
           ) : (
             <SinDatos>Los resultados aparecen cuando se envía el primer informe.</SinDatos>
-          )}
-        </Tarjeta>
-
-        {/* ================= EN CURSO HACE MÁS TIEMPO ================= */}
-        <Tarjeta titulo="En curso hace más tiempo" subtitulo="Solicitudes sin informe, de la más antigua a la más nueva">
-          {d.sinResponsable > 0 && (
-            <button
-              type="button"
-              onClick={() => irALista({ responsable: 'sin' })}
-              className={cx('mb-3.5 flex w-full cursor-pointer items-center gap-2.5 rounded-[10px] bg-e-recibida-bg px-3.5 py-[11px] text-left text-sm text-e-recibida hover:brightness-97', FOCO)}
-            >
-              <FaExclamationCircle aria-hidden="true" />
-              <span className="flex-1">
-                <strong>{d.sinResponsable}</strong> {d.sinResponsable === 1 ? 'solicitud sin' : 'solicitudes sin'} profesional responsable
-              </span>
-              <FaChevronRight aria-hidden="true" className="text-[11px]" />
-            </button>
-          )}
-          {enEspera.length ? (
-            <ul className="m-0 flex list-none flex-col gap-2 p-0">
-              {enEspera.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    to={`/solicitudes/${s.id}`}
-                    className={cx(
-                      'flex items-center gap-3 rounded-[10px] border border-borde px-3 py-2.5 text-texto no-underline transition-colors hover:border-acento hover:bg-acento-suave',
-                      FOCO
-                    )}
-                  >
-                    <Avatar nombre={s.candidato.nombre} />
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <strong className="text-sm">{s.candidato.nombre}</strong>
-                      <span className="truncate text-[12.5px] text-tenue">
-                        {s.nombreCargo} · desde el {formatearFecha(s.fechaSolicitud)}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-base font-bold text-texto tabular-nums">
-                      {diasEsperando(s)} <small className="text-xs font-medium text-sutil">{diasEsperando(s) === 1 ? 'día' : 'días'}</small>
-                    </span>
-                    <span className="hidden sm:inline-flex">
-                      <EtapaBadge etapa={s.etapa} etapas={catalogos.etapas} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <SinDatos>No hay solicitudes en curso. ¡Todo al día!</SinDatos>
           )}
         </Tarjeta>
       </div>

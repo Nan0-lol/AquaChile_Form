@@ -73,11 +73,9 @@ export const aHistorial = (fila) => ({
 export const aPostulacion = (fila) => ({
   id: fila.id,
   nombre: fila.nombre,
-  rut: fila.rut,
   correo: fila.correo,
   telefono: fila.telefono,
   area: fila.area,
-  carta: fila.carta,
   cv: { nombre: fila.cv_nombre_original, bytes: fila.cv_bytes },
   estado: fila.estado,
   solicitudId: fila.solicitud_id ?? null,

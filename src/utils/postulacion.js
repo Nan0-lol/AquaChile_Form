@@ -3,47 +3,16 @@
 // server/validaciones.js: aquí solo sirven para avisar al instante.
 import { digitosCelular, formatearCelular, MAX_ARCHIVO_BYTES } from './solicitud';
 
-export const MAX_CARTA = 3000;
-
 export const POSTULACION_INICIAL = {
   nombre: '',
-  rut: '',
   correo: '',
   telefono: '',
   area: '',
-  carta: '', // opcional
 };
 
 export const CAMPOS_POSTULACION = Object.keys(POSTULACION_INICIAL);
 
 const REGEX_CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-// ---------- RUT ----------
-export const limpiarRut = (rut = '') => String(rut).replace(/[^0-9kK]/g, '').toUpperCase();
-
-/** Revisa el dígito verificador (módulo 11) */
-export const rutEsValido = (rut = '') => {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 8 || limpio.length > 9) return false;
-  const cuerpo = limpio.slice(0, -1);
-  if (!/^\d+$/.test(cuerpo)) return false;
-  let suma = 0;
-  let multiplo = 2;
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * multiplo;
-    multiplo = multiplo === 7 ? 2 : multiplo + 1;
-  }
-  const resto = 11 - (suma % 11);
-  const esperado = resto === 11 ? '0' : resto === 10 ? 'K' : String(resto);
-  return limpio.slice(-1) === esperado;
-};
-
-/** 12345678k -> 12.345.678-K */
-export const formatearRut = (rut = '') => {
-  const limpio = limpiarRut(rut);
-  if (limpio.length < 2) return limpio;
-  return `${limpio.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}-${limpio.slice(-1)}`;
-};
 
 /** Devuelve el mensaje de error del campo, o '' si está bien. */
 export const validarCampoPostulacion = (campo, valor = '') => {
@@ -51,9 +20,6 @@ export const validarCampoPostulacion = (campo, valor = '') => {
   switch (campo) {
     case 'nombre':
       return texto.length < 3 || texto.length > 100 ? 'Ingresa tu nombre completo.' : '';
-    case 'rut':
-      if (!texto) return 'Ingresa tu RUT.';
-      return rutEsValido(texto) ? '' : 'RUT inválido. Revisa el dígito verificador.';
     case 'correo':
       if (!texto) return 'Ingresa tu correo.';
       return REGEX_CORREO.test(texto) && texto.length <= 254 ? '' : 'Correo con formato inválido.';
@@ -62,8 +28,6 @@ export const validarCampoPostulacion = (campo, valor = '') => {
       return /^9\d{8}$/.test(digitosCelular(texto)) ? '' : 'Debe tener 9 dígitos y comenzar con 9.';
     case 'area':
       return texto ? '' : 'Selecciona un área.';
-    case 'carta':
-      return String(valor).length > MAX_CARTA ? 'La carta puede tener hasta 3.000 caracteres.' : '';
     default:
       return '';
   }
@@ -95,11 +59,9 @@ export const validarPostulacionCompleta = (valores, { cv = null, consentimiento 
 export const construirFormDataPostulacion = (valores, { cv, trampa = '' }) => {
   const datos = new FormData();
   datos.append('nombre', valores.nombre.trim());
-  datos.append('rut', formatearRut(valores.rut));
   datos.append('correo', valores.correo.trim());
   datos.append('telefono', `+56${digitosCelular(valores.telefono)}`);
   datos.append('area', valores.area);
-  datos.append('carta', valores.carta.trim());
   datos.append('consentimiento', 'true');
   datos.append('sitioWeb', trampa); // campo trampa: una persona nunca lo ve ni lo llena
   datos.append('cv', cv); // el archivo va al final
@@ -123,7 +85,7 @@ export const filtrarPostulaciones = (lista, { estado = '', q = '' } = {}) => {
   return lista.filter(
     (p) =>
       (!estado || p.estado === estado) &&
-      (!texto || [p.nombre, p.correo, p.rut].some((v) => normalizar(v).includes(texto)))
+      (!texto || [p.nombre, p.correo].some((v) => normalizar(v).includes(texto)))
   );
 };
 
