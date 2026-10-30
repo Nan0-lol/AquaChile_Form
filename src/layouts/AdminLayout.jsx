@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminHeader from '../components/AdminHeader';
 import { verificarSesion } from '../auth';
 import { EVENTO_SESION_EXPIRADA } from '../services/api';
+import { tituloDeRuta } from '../utils/titulo';
 
 const CLAVE_TEMA = 'aquachile_tema';
 
@@ -23,6 +24,12 @@ const temaInicial = () => {
 // las páginas del panel lo comparten.
 const AdminLayout = () => {
   const navigate = useNavigate();
+
+  // Nombre de la pestaña según la página
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = tituloDeRuta(pathname);
+  }, [pathname]);
   const [tema, setTema] = useState(temaInicial);
   const [, setSesionRevisada] = useState(false);
 

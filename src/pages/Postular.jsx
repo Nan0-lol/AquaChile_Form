@@ -79,15 +79,11 @@ const Postular = () => {
   const [enviada, setEnviada] = useState(false);
   const trampaRef = useRef(null);
 
+  // En esta página se oculta la barra de desplazamiento (se sigue bajando igual).
+  // El nombre de la pestaña lo pone PublicLayout.
   useEffect(() => {
-    const anterior = document.title;
-    document.title = 'Postula · AquaChile';
-    // En esta página se oculta la barra de desplazamiento (se sigue bajando igual)
     document.documentElement.classList.add('sin-barra');
-    return () => {
-      document.title = anterior;
-      document.documentElement.classList.remove('sin-barra');
-    };
+    return () => document.documentElement.classList.remove('sin-barra');
   }, []);
 
   const cargar = () => {
@@ -301,7 +297,7 @@ const Postular = () => {
     // Fondo celeste casi blanco: hace que la caja blanca del formulario resalte limpio
     <div className="flex flex-col bg-[#eaf4fb]">
       {/* ---------- 1. Portada ---------- */}
-      <section className="bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/FondoLogin.png')` }}>
+      <section className="bg-cover bg-center bg-no-repeat" style={{ backgroundImage: `url('/FondoFormulario.png')` }}>
         <div className="bg-linear-100 from-[#1e2d38]/92 via-[#1e2d38]/75 to-[#1e2d38]/45 px-5 pt-14 pb-32 sm:pt-20 sm:pb-36">
           {/* Mismo ancho que la caja del formulario: el texto y la caja parten en la misma línea */}
           <div className="mx-auto max-w-[760px] text-white">

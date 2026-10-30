@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaSignOutAlt, FaMoon, FaSun, FaChartPie, FaPlusCircle, FaClipboardList, FaUsers, FaInbox } from 'react-icons/fa';
+import { FaSignOutAlt, FaMoon, FaSun, FaChartPie, FaClipboardList, FaUsers, FaInbox } from 'react-icons/fa';
 import { obtenerUsuario, cerrarSesion, puede, NOMBRES_ROL } from '../auth';
 import { cx, iniciales } from './ui';
 
 // Secciones del panel. Cada rol ve solo las que su permiso le deja usar.
-// "Nueva solicitud" se oculta en celulares (no cabe): ahí se usa el botón de la lista de solicitudes.
+// "Nueva solicitud" no va en el menú: es un botón dentro de Solicitudes y de Candidatos.
 const SECCIONES = [
   { ruta: '/postulaciones', texto: 'Postulaciones', Icono: FaInbox, permiso: 'postulacion:ver' },
   { ruta: '/solicitudes', texto: 'Solicitudes', Icono: FaClipboardList, permiso: 'solicitud:ver' },
   { ruta: '/candidatos', texto: 'Candidatos', Icono: FaUsers, permiso: 'candidato:ver' },
   { ruta: '/dashboard', texto: 'Panel', Icono: FaChartPie, permiso: 'indicadores:ver' },
-  { ruta: '/solicitudes/nueva', texto: 'Nueva solicitud', Icono: FaPlusCircle, permiso: 'solicitud:crear', soloPantallaGrande: true },
 ];
 
 // Botón redondo del header (tema y usuario comparten este estilo)
@@ -25,14 +24,13 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const usuario = obtenerUsuario();
   const nombre = usuario?.nombre || 'Usuario';
+  // En la barra solo el primer nombre (el nombre completo aparece al abrir el menú)
+  const primerNombre = nombre.trim().split(/\s+/)[0];
   const rol = NOMBRES_ROL[usuario?.rol] || 'Reclutamiento AquaChile';
   const secciones = SECCIONES.filter((s) => puede(s.permiso));
 
-  // "Solicitudes" queda marcada también en el detalle, pero no en "Nueva solicitud"
-  const activa = (ruta) =>
-    ruta === '/solicitudes'
-      ? pathname === ruta || (pathname.startsWith('/solicitudes/') && pathname !== '/solicitudes/nueva')
-      : pathname === ruta || pathname.startsWith(`${ruta}/`);
+  // La sección queda marcada también en sus páginas internas (detalle, nueva…)
+  const activa = (ruta) => pathname === ruta || pathname.startsWith(`${ruta}/`);
 
   // Cerrar el menú con Escape
   useEffect(() => {
@@ -57,7 +55,7 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
 
       {secciones.length > 0 && (
         <nav aria-label="Secciones del panel" className="mr-auto ml-1 flex items-center gap-0.5 sm:ml-3 sm:gap-1">
-          {secciones.map(({ ruta, texto, Icono, soloPantallaGrande }) => {
+          {secciones.map(({ ruta, texto, Icono }) => {
             const esActiva = activa(ruta);
             return (
               <Link
@@ -65,8 +63,7 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
                 to={ruta}
                 aria-current={esActiva ? 'page' : undefined}
                 className={cx(
-                  'size-9 items-center justify-center gap-2 rounded-lg max-[359px]:size-8 text-sm whitespace-nowrap no-underline transition-colors lg:h-[38px] lg:w-auto lg:px-2.5 xl:px-3.5',
-                  soloPantallaGrande ? 'hidden sm:inline-flex' : 'inline-flex',
+                  'inline-flex size-9 items-center justify-center gap-2 rounded-lg max-[359px]:size-8 text-sm whitespace-nowrap no-underline transition-colors lg:h-[38px] lg:w-auto lg:px-2.5 xl:px-3.5',
                   'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento-claro',
                   esActiva ? 'bg-white/14 font-semibold text-white' : 'font-medium text-slate-200 hover:bg-white/8 hover:text-white'
                 )}
@@ -105,7 +102,7 @@ const AdminHeader = ({ tema = 'light', onAlternarTema }) => {
               {iniciales(nombre)}
             </span>
             <span aria-hidden="true" className="hidden max-w-40 truncate text-sm font-semibold sm:block">
-              {nombre}
+              {primerNombre}
             </span>
           </button>
           {menuAbierto && (

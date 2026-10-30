@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
+import { tituloDeRuta } from '../utils/titulo';
 
 // Esqueleto de las páginas públicas:
 //   NavBar arriba, la página en el medio (<Outlet />) y el footer abajo.
@@ -11,6 +12,10 @@ import Footer from '../components/Footer';
 const PublicLayout = () => {
   const { pathname } = useLocation();
   const esPostulacion = pathname.startsWith('/postular');
+  // Nombre de la pestaña según la página
+  useEffect(() => {
+    document.title = tituloDeRuta(pathname);
+  }, [pathname]);
   return (
     <div className="relative flex min-h-screen flex-col">
       <NavBar transparente={!esPostulacion} />
