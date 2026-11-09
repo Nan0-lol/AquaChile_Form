@@ -1,7 +1,7 @@
 // Ayudas compartidas por las rutas.
 import fs from 'node:fs';
-import path from 'node:path';
 import { ErrorServicio } from '../servicios/errores.js';
+import { borrarAdjuntos, rutaDentro } from '../servicios/archivos.js';
 
 /**
  * Envuelve un controlador: si el servicio lanza un ErrorServicio, responde con su
@@ -18,10 +18,14 @@ export const manejar = (fn) => async (req, res, next) => {
   }
 };
 
-/** Borra archivos de la carpeta de adjuntos (sin salir nunca de ella). Ignora los que ya no existen. */
-export const borrarArchivos = (carpeta, nombres = []) =>
-  Promise.all(
-    nombres
-      .filter(Boolean)
-      .map((nombre) => fs.promises.unlink(path.join(carpeta, path.basename(nombre))).catch(() => {}))
-  );
+/** Borra adjuntos de la carpeta uploads (sin salir nunca de ella). Ignora los que ya no existen. */
+export const borrarArchivos = borrarAdjuntos;
+
+/** Descarga un adjunto con su nombre original, o responde 404 si ya no está. */
+export function enviarAdjunto(res, carpetaArchivos, archivo, nombre) {
+  const ruta = rutaDentro(carpetaArchivos, archivo);
+  if (!ruta || !fs.existsSync(ruta)) {
+    return res.status(404).json({ ok: false, mensaje: 'El archivo ya no existe en el servidor.' });
+  }
+  res.download(ruta, nombre || 'archivo');
+}

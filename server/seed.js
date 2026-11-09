@@ -8,7 +8,7 @@
 // =====================================================================
 import path from 'node:path';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
+import { carpetaDePersona } from './servicios/archivos.js';
 import { fileURLToPath } from 'node:url';
 import { crearRepositorio } from './db.js';
 import { asegurarUsuariosIniciales, crearUsuario, USUARIOS_DEMO } from './servicios/usuarios.js';
@@ -106,8 +106,11 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
   const analista = usuario('analista');
 
   // CV de ejemplo en disco; devuelve sus datos para guardarlos en la base
-  const crearCv = (nombre, cargo) => {
-    const archivo = `${crypto.randomUUID()}.pdf`;
+  // Cada persona tiene su carpeta: uploads/Nombre-Apellido-xxxxxx/
+  const crearCv = (nombre, cargo, tipo = 'CV') => {
+    const carpeta = carpetaDePersona(nombre, correoDe(nombre));
+    fs.mkdirSync(path.join(carpetaArchivos, carpeta), { recursive: true });
+    const archivo = `${carpeta}/${tipo}.pdf`;
     const pdf = crearPdfSimple(`CV de ejemplo - ${nombre}`, [
       'Documento ficticio generado para la demostración del sistema.',
       `Cargo al que postula: ${cargo}`,
@@ -120,7 +123,7 @@ export function cargarDatosDemo(repo, { carpetaArchivos = CARPETA_ARCHIVOS, ahor
 
   return repo.transaccion(() => {
     POSTULACIONES.forEach((p, i) => {
-      const cv = crearCv(p.nombre, 'Postulación web');
+      const cv = crearCv(p.nombre, 'Postulación web', 'CV-postulacion');
       const id = repo.postulaciones.crear({
         nombre: p.nombre,
         correo: correoDe(p.nombre),
@@ -207,18 +210,11 @@ if (ejecutadoDirecto) {
   }
 
   if (reiniciar) {
-    for (const c of repo.candidatos.listar()) {
-      for (const f of repo.candidatos.archivos(c.id)) {
-        for (const nombre of [f.cv_archivo, f.descriptor_archivo].filter(Boolean)) {
-          fs.rmSync(path.join(CARPETA_ARCHIVOS, path.basename(nombre)), { force: true });
-        }
-      }
-      repo.candidatos.eliminar(c.id);
-    }
-    for (const p of repo.postulaciones.listar()) {
-      fs.rmSync(path.join(CARPETA_ARCHIVOS, path.basename(p.cv_archivo)), { force: true });
-      repo.postulaciones.eliminar(p.id);
-    }
+    for (const c of repo.candidatos.listar()) repo.candidatos.eliminar(c.id);
+    for (const p of repo.postulaciones.listar()) repo.postulaciones.eliminar(p.id);
+    // Se vacía la carpeta de adjuntos completa (todos los CV eran de lo que se acaba de borrar)
+    fs.rmSync(CARPETA_ARCHIVOS, { recursive: true, force: true });
+    fs.mkdirSync(CARPETA_ARCHIVOS, { recursive: true });
     console.log('Candidatos, solicitudes y postulaciones anteriores eliminados.');
   }
 

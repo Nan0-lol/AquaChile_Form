@@ -2,11 +2,10 @@
 // avanzar de etapa, registrar la evaluación, descargar adjuntos y eliminar.
 import { Router } from 'express';
 import path from 'node:path';
-import fs from 'node:fs';
-import crypto from 'node:crypto';
 import { permitir } from '../seguridad.js';
 import { validarArchivo } from '../validaciones.js';
-import { manejar, borrarArchivos } from './utilidades.js';
+import { manejar, borrarArchivos, enviarAdjunto } from './utilidades.js';
+import { guardarEnCarpetaDePersona, rutaDentro } from '../servicios/archivos.js';
 import {
   listarSolicitudes,
   obtenerSolicitud,
@@ -34,22 +33,29 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
     res.json(obtenerSolicitud(repo, req.params.id));
   }));
 
+  /** Nombre y correo de la persona evaluada (candidato ya registrado o nuevo) */
+  const personaDe = (body) => {
+    const id = typeof body.candidatoId === 'string' ? body.candidatoId.trim() : '';
+    const registrado = id ? repo.candidatos.obtener(id) : null;
+    if (registrado) return { nombre: registrado.nombre, correo: registrado.correo };
+    return { nombre: body.nombre, correo: body.correo };
+  };
+
   /**
    * Si la solicitud viene de una postulación y el analista no subió otro CV,
    * se usa una COPIA del CV de la postulación (así borrar una no borra la otra).
    */
-  const copiarCvDePostulacion = async (postulacionId) => {
+  const copiarCvDePostulacion = async (postulacionId, persona) => {
     const fila = postulacionParaEvaluar(repo, postulacionId);
-    const origen = path.join(carpetaArchivos, path.basename(fila.cv_archivo));
-    const filename = `${crypto.randomUUID()}${path.extname(fila.cv_archivo).toLowerCase()}`;
+    const origen = rutaDentro(carpetaArchivos, fila.cv_archivo);
     try {
-      await fs.promises.copyFile(origen, path.join(carpetaArchivos, filename));
+      const filename = await guardarEnCarpetaDePersona(carpetaArchivos, origen, { ...persona, tipo: 'CV', copiar: true });
+      return { filename, originalname: fila.cv_nombre_original, size: fila.cv_bytes, copiado: true };
     } catch {
       throw new ErrorServicio(404, 'El CV de la postulación ya no existe en el servidor. Adjunta uno nuevo.', {
         errores: { cv: 'Adjunta el CV del candidato (PDF o DOCX).' },
       });
     }
-    return { filename, originalname: fila.cv_nombre_original, size: fila.cv_bytes, copiado: true };
   };
 
   // Formulario del analista: datos + CV (obligatorio) + descriptor del cargo (opcional)
@@ -79,9 +85,16 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
           await borrarArchivos(carpetaArchivos, subidos.map((a) => a.filename));
           return res.status(400).json({ ok: false, mensaje: 'Revisa los archivos adjuntos.', errores });
         }
-        if (!cv && postulacionId) {
-          cv = await copiarCvDePostulacion(postulacionId);
-          subidos.push(cv);
+        // Cada archivo pasa a la carpeta de la persona: uploads/Nombre-Apellido-xxxxxx/
+        const persona = personaDe(req.body || {});
+        if (typeof persona.nombre === 'string' && persona.nombre.trim()) {
+          for (const [archivo, tipo] of [[cv, 'CV'], [descriptor, 'Descriptor-del-cargo']]) {
+            if (archivo) archivo.filename = await guardarEnCarpetaDePersona(carpetaArchivos, archivo.path, { ...persona, tipo });
+          }
+          if (!cv && postulacionId) {
+            cv = await copiarCvDePostulacion(postulacionId, persona);
+            subidos.push(cv);
+          }
         }
 
         const solicitud = crearSolicitud(repo, req.usuario, req.body || {}, { cv, descriptor });
@@ -121,12 +134,8 @@ export function rutasSolicitudes({ repo, auth, correo, subida, carpetaArchivos, 
   for (const tipo of ['cv', 'descriptor']) {
     router.get(`/:id/${tipo}`, permitir('solicitud:ver'), manejar((req, res) => {
       const { archivo, nombre } = archivoDeSolicitud(repo, req.params.id, tipo);
-      // basename: aunque alguien manipulara la base, nunca se sale de la carpeta de adjuntos
-      const ruta = path.join(carpetaArchivos, path.basename(archivo));
-      if (!fs.existsSync(ruta)) {
-        return res.status(404).json({ ok: false, mensaje: 'El archivo ya no existe en el servidor.' });
-      }
-      res.download(ruta, nombre || path.basename(archivo));
+      // rutaDentro: aunque alguien manipulara la base, nunca se sale de la carpeta de adjuntos
+      enviarAdjunto(res, carpetaArchivos, archivo, nombre);
     }));
   }
 

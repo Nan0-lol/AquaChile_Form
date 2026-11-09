@@ -1,10 +1,8 @@
 // Bandeja de postulaciones (solo con sesión): el analista revisa lo que llegó
 // por el formulario público, descarga el CV, la descarta o la pasa a evaluación.
 import { Router } from 'express';
-import path from 'node:path';
-import fs from 'node:fs';
 import { permitir } from '../seguridad.js';
-import { manejar, borrarArchivos } from './utilidades.js';
+import { manejar, borrarArchivos, enviarAdjunto } from './utilidades.js';
 import {
   listarPostulaciones,
   obtenerPostulacion,
@@ -27,11 +25,7 @@ export function rutasPostulaciones({ repo, auth, carpetaArchivos }) {
 
   router.get('/:id/cv', permitir('postulacion:ver'), manejar((req, res) => {
     const { archivo, nombre } = archivoDePostulacion(repo, req.params.id);
-    const ruta = path.join(carpetaArchivos, path.basename(archivo));
-    if (!fs.existsSync(ruta)) {
-      return res.status(404).json({ ok: false, mensaje: 'El archivo ya no existe en el servidor.' });
-    }
-    res.download(ruta, nombre || path.basename(archivo));
+    enviarAdjunto(res, carpetaArchivos, archivo, nombre);
   }));
 
   // { estado: 'descartada' } o { estado: 'nueva' } (reabrir)

@@ -32,13 +32,13 @@ MVP académico desarrollado para la asignatura **Full Stack II (DuocUC)** a part
 
 Hoy la evaluación psicolaboral se coordina con **varias herramientas separadas**:
 
-| Paso                                                           | Herramienta actual  |
-| -------------------------------------------------------------- | ------------------- |
-| El analista pide la evaluación                                 | Microsoft **Forms** |
-| La psicóloga registra los datos                                | **Excel**           |
-| Se sigue el avance (recibida → agendada → realizada → informe) | **Planner**         |
-| Se avisa que el informe está listo                             | **Correo**          |
-| Se revisan indicadores (por mes, por familia, _timing_)        | **Power BI**        |
+| Paso | Herramienta actual |
+|---|---|
+| El analista pide la evaluación | Microsoft **Forms** |
+| La psicóloga registra los datos | **Excel** |
+| Se sigue el avance (recibida → agendada → realizada → informe) | **Planner** |
+| Se avisa que el informe está listo | **Correo** |
+| Se revisan indicadores (por mes, por familia, *timing*) | **Power BI** |
 
 Esto genera trabajo administrativo repetido, información dispersa y poca visibilidad del estado de cada evaluación.
 
@@ -65,29 +65,29 @@ flowchart LR
 ```
 
 - **Postulante externo:** viene de fuera de la empresa y postula por el formulario público.
-- **Postulante interno:** ya trabaja en AquaChile (por ejemplo, un ascenso). El analista le envía el enlace del formulario (botón _Copiar enlace del formulario_) o crea la solicitud directamente.
+- **Postulante interno:** ya trabaja en AquaChile (por ejemplo, un ascenso). El analista le envía el enlace del formulario (botón *Copiar enlace del formulario*) o crea la solicitud directamente.
 - El analista marca el **origen (Interno / Externo)** al crear la solicitud, tal como hoy lo hace en el Forms.
 
-**Etapas y estados.** El caso sugiere 3 estados (_Pendiente, En proceso, Finalizada_). El sistema usa las **4 etapas reales** del Planner y las agrupa en esos 3 estados:
+**Etapas y estados.** El caso sugiere 3 estados (*Pendiente, En proceso, Finalizada*). El sistema usa las **4 etapas reales** del Planner y las agrupa en esos 3 estados:
 
-| Etapa (real)                               | Estado (caso) |
-| ------------------------------------------ | ------------- |
-| Evaluación recibida                        | Pendiente     |
-| Entrevista agendada · Entrevista realizada | En proceso    |
-| Informe enviado                            | Finalizada    |
+| Etapa (real) | Estado (caso) |
+|---|---|
+| Evaluación recibida | Pendiente |
+| Entrevista agendada · Entrevista realizada | En proceso |
+| Informe enviado | Finalizada |
 
 ## 4. Roles y permisos
 
-| Acción                                   | Admin | Analista | Evaluador | Jefatura |
-| ---------------------------------------- | :---: | :------: | :-------: | :------: |
-| Ver solicitudes, candidatos y panel      |  ✅   |    ✅    |    ✅     |    ✅    |
-| Ver postulaciones web                    |  ✅   |    ✅    |     —     |    ✅    |
-| Revisar / descartar postulaciones        |  ✅   |    ✅    |     —     |    —     |
-| Registrar candidatos y crear solicitudes |  ✅   |    ✅    |     —     |    —     |
-| Editar datos de candidato o solicitud    |  ✅   |    ✅    |    ✅     |    —     |
-| Avanzar etapa y registrar evaluación     |  ✅   |    —     |    ✅     |    —     |
-| Eliminar solicitudes                     |  ✅   |    ✅    |     —     |    —     |
-| Eliminar candidatos y postulaciones      |  ✅   |    —     |     —     |    —     |
+| Acción | Admin | Analista | Evaluador | Jefatura |
+|---|:-:|:-:|:-:|:-:|
+| Ver solicitudes, candidatos y panel | ✅ | ✅ | ✅ | ✅ |
+| Ver postulaciones web | ✅ | ✅ | — | ✅ |
+| Revisar / descartar postulaciones | ✅ | ✅ | — | — |
+| Registrar candidatos y crear solicitudes | ✅ | ✅ | — | — |
+| Editar datos de candidato o solicitud | ✅ | ✅ | ✅ | — |
+| Avanzar etapa y registrar evaluación | ✅ | — | ✅ | — |
+| Eliminar solicitudes | ✅ | ✅ | — | — |
+| Eliminar candidatos y postulaciones | ✅ | — | — | — |
 
 - La **jefatura** solo consulta (modo lectura), como pide el caso.
 - Los permisos se revisan **en el servidor** en cada petición. El frontend solo oculta lo que el rol no puede usar.
@@ -95,41 +95,40 @@ flowchart LR
 
 ## 5. Pantallas
 
-| Página                                                   | Ruta                 | Acceso     |
-| -------------------------------------------------------- | -------------------- | ---------- |
-| Formulario de postulación                                | `/postular`          | Público    |
-| Inicio de sesión                                         | `/login`             | Público    |
-| Postulaciones web                                        | `/postulaciones`     | Con sesión |
-| Solicitudes (lista con filtros y exportación a Excel)    | `/solicitudes`       | Con sesión |
-| Nueva solicitud                                          | `/solicitudes/nueva` | Con sesión |
-| Detalle de solicitud (etapas, evaluación, historial, CV) | `/solicitudes/:id`   | Con sesión |
-| Candidatos                                               | `/candidatos`        | Con sesión |
-| Registrar candidato                                      | `/candidatos/nuevo`  | Con sesión |
-| Ficha del candidato                                      | `/candidatos/:id`    | Con sesión |
-| Panel de indicadores                                     | `/dashboard`         | Con sesión |
+| Página | Ruta | Acceso |
+|---|---|---|
+| Formulario de postulación | `/postular` | Público |
+| Inicio de sesión | `/login` | Público |
+| Postulaciones web | `/postulaciones` | Con sesión |
+| Solicitudes (lista con filtros y exportación a Excel) | `/solicitudes` | Con sesión |
+| Nueva solicitud | `/solicitudes/nueva` | Con sesión |
+| Detalle de solicitud (etapas, evaluación, historial, CV) | `/solicitudes/:id` | Con sesión |
+| Candidatos | `/candidatos` | Con sesión |
+| Registrar candidato | `/candidatos/nuevo` | Con sesión |
+| Ficha del candidato | `/candidatos/:id` | Con sesión |
+| Panel de indicadores | `/dashboard` | Con sesión |
 
 Todas las pantallas son **responsive** (computador y celular) y el panel tiene **modo claro y oscuro**.
 
 ## 6. Requerimientos del caso cubiertos
 
-| Código | Requerimiento (texto del caso)                                              | Prioridad | Dónde se cumple                                                      |
-| ------ | --------------------------------------------------------------------------- | :-------: | -------------------------------------------------------------------- |
-| RF01   | Permitir ingreso simple al sistema con usuarios ficticios o roles simulados |   Alta    | _Login_ con 4 roles (admin, analista, evaluador, jefatura)           |
-| RF02   | Registrar candidatos con datos mínimos obligatorios                         |   Alta    | _Registrar candidato_, _Nueva solicitud_ y formulario público        |
-| RF03   | Editar y consultar información principal de un candidato                    |   Alta    | _Candidatos_ → ficha → _Editar_                                      |
-| RF04   | Crear solicitudes de evaluación asociadas a un candidato                    |   Alta    | _Nueva solicitud_ (candidato nuevo o _Ya registrado_)                |
-| RF05   | Registrar cargo, familia de cargo, fecha de solicitud y responsable         |   Alta    | _Nueva solicitud_ (la fecha se registra sola)                        |
-| RF06   | Visualizar listado de solicitudes y consultar su detalle                    |   Alta    | _Solicitudes_ y _Detalle de solicitud_                               |
-| RF07   | Buscar o filtrar solicitudes por estado, fecha, cargo o candidato           |   Media   | Filtros por etapa, fechas, familia, responsable y texto (sin tildes) |
-| RF08   | Actualizar el estado de la solicitud: Pendiente, En proceso o Finalizada    |   Alta    | Avance por etapas en el detalle (4 etapas → 3 estados)               |
-| RF09   | Registrar fecha de evaluación, observaciones o resultado general            |   Alta    | Sección _Evaluación_ del detalle                                     |
-| RF10   | Mostrar dashboard simple con indicadores generales del proceso              |   Media   | _Panel_                                                              |
+| Código | Requerimiento (texto del caso) | Prioridad | Dónde se cumple |
+|---|---|:-:|---|
+| RF01 | Permitir ingreso simple al sistema con usuarios ficticios o roles simulados | Alta | *Login* con 4 roles (admin, analista, evaluador, jefatura) |
+| RF02 | Registrar candidatos con datos mínimos obligatorios | Alta | *Registrar candidato*, *Nueva solicitud* y formulario público |
+| RF03 | Editar y consultar información principal de un candidato | Alta | *Candidatos* → ficha → *Editar* |
+| RF04 | Crear solicitudes de evaluación asociadas a un candidato | Alta | *Nueva solicitud* (candidato nuevo o *Ya registrado*) |
+| RF05 | Registrar cargo, familia de cargo, fecha de solicitud y responsable | Alta | *Nueva solicitud* (la fecha se registra sola) |
+| RF06 | Visualizar listado de solicitudes y consultar su detalle | Alta | *Solicitudes* y *Detalle de solicitud* |
+| RF07 | Buscar o filtrar solicitudes por estado, fecha, cargo o candidato | Media | Filtros por etapa, fechas, familia, responsable y texto (sin tildes) |
+| RF08 | Actualizar el estado de la solicitud: Pendiente, En proceso o Finalizada | Alta | Avance por etapas en el detalle (4 etapas → 3 estados) |
+| RF09 | Registrar fecha de evaluación, observaciones o resultado general | Alta | Sección *Evaluación* del detalle |
+| RF10 | Mostrar dashboard simple con indicadores generales del proceso | Media | *Panel* |
 
-**Indicadores del panel:** total de candidatos, pendientes, en proceso y finalizadas (los 4 que pide el caso), más _Requiere atención_, evaluaciones por mes, _timing_ promedio (días desde la solicitud hasta el informe), distribución por familia de cargo y resultados.
+**Indicadores del panel:** total de candidatos, pendientes, en proceso y finalizadas (los 4 que pide el caso), más *Requiere atención*, evaluaciones por mes, *timing* promedio (días desde la solicitud hasta el informe), distribución por familia de cargo y resultados.
 
 **Reglas de negocio destacadas:**
-
-- No se puede pasar a _Entrevista agendada_ sin fecha de entrevista.
+- No se puede pasar a *Entrevista agendada* sin fecha de entrevista.
 - No se puede marcar como realizada una entrevista que todavía no ocurre.
 - No se puede enviar el informe sin resultado.
 - La entrevista debe quedar dentro del año siguiente a la solicitud.
@@ -146,19 +145,33 @@ flowchart LR
     S -.->|avisos| M[Correo<br/>Ethereal / SMTP]
 ```
 
-| Capa                 | Tecnología                                                                 |
-| -------------------- | -------------------------------------------------------------------------- |
-| Frontend             | **React** + **Vite**, **React Router**, **Tailwind CSS v4**, React Icons   |
+| Capa | Tecnología |
+|---|---|
+| Frontend | **React** + **Vite**, **React Router**, **Tailwind CSS v4**, React Icons |
 | Backend (monolítico) | **Node.js** + **Express**, **Multer** (archivos), **Nodemailer** (correos) |
-| Base de datos        | **SQLite** (módulo `node:sqlite` incluido en Node 22.5+)                   |
-| Pruebas              | **Vitest**                                                                 |
+| Base de datos | **SQLite** (módulo `node:sqlite` incluido en Node 22.5+) |
+| Pruebas | **Vitest** |
 
 **Organización del backend en capas:**
-
 - `rutas/` recibe la petición y revisa permisos.
 - `servicios/` aplica las reglas de negocio.
 - `db.js` accede a la base con consultas parametrizadas.
 - `validaciones.js` valida los datos de entrada.
+
+**Archivos adjuntos: una carpeta por persona.** Cada CV y descriptor se guarda en `server/uploads`, dentro de una carpeta con el nombre de la persona:
+
+```
+server/uploads/
+  Valentina-Rios-Carrasco-3f2a1b/
+    CV-postulacion.pdf        ← el que subió en el formulario público
+    CV.pdf                    ← el de su solicitud de evaluación
+    Descriptor-del-cargo.pdf  ← opcional
+```
+
+- El nombre va sin tildes ni símbolos para que funcione en Windows.
+- El código final sale del correo: la postulación y la solicitud de una misma persona caen en la misma carpeta, y dos personas con el mismo nombre no se mezclan.
+- La base guarda la ruta (`Valentina-Rios-Carrasco-3f2a1b/CV.pdf`) y el nombre original del archivo, que es el que se usa al descargarlo.
+- Al eliminar una postulación o solicitud se borran sus archivos, y la carpeta si queda vacía.
 
 ## 8. Base de datos
 
@@ -218,14 +231,14 @@ erDiagram
     }
 ```
 
-| Tabla           | Qué guarda                                                                                                                          |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `usuarios`      | Personas del equipo, con su rol. La contraseña se guarda cifrada (scrypt + sal), nunca tal cual.                                    |
-| `candidatos`    | Nombre, correo (único), celular y origen (interno/externo).                                                                         |
-| `solicitudes`   | Cargo, familia, ubicación, unidad, centro de costo, referencias, referido, aspectos a indagar, CV, descriptor, etapa y responsable. |
-| `evaluaciones`  | Una por solicitud: fecha de entrevista, observaciones, resultado y fecha del informe.                                               |
-| `historial`     | Trazabilidad de cada acción sobre una solicitud.                                                                                    |
-| `postulaciones` | Lo que llega del formulario público y su estado (_Por revisar, En evaluación, Descartada_).                                         |
+| Tabla | Qué guarda |
+|---|---|
+| `usuarios` | Personas del equipo, con su rol. La contraseña se guarda cifrada (scrypt + sal), nunca tal cual. |
+| `candidatos` | Nombre, correo (único), celular y origen (interno/externo). |
+| `solicitudes` | Cargo, familia, ubicación, unidad, centro de costo, referencias, referido, aspectos a indagar, CV, descriptor, etapa y responsable. |
+| `evaluaciones` | Una por solicitud: fecha de entrevista, observaciones, resultado y fecha del informe. |
+| `historial` | Trazabilidad de cada acción sobre una solicitud. |
+| `postulaciones` | Lo que llega del formulario público y su estado (*Por revisar, En evaluación, Descartada*). |
 
 Al eliminar un candidato se eliminan **en cascada** sus solicitudes, evaluaciones, historial y archivos.
 
@@ -235,33 +248,33 @@ Base: `http://localhost:3001/api`
 
 **Públicos (sin sesión)**
 
-| Método | Ruta                     | Descripción                         |
-| ------ | ------------------------ | ----------------------------------- |
-| GET    | `/health`                | Estado del servidor                 |
-| GET    | `/publico/opciones`      | Áreas de interés para el formulario |
-| POST   | `/publico/postulaciones` | Enviar postulación con CV (PDF)     |
-| POST   | `/login`                 | Iniciar sesión                      |
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/health` | Estado del servidor |
+| GET | `/publico/opciones` | Áreas de interés para el formulario |
+| POST | `/publico/postulaciones` | Enviar postulación con CV (PDF) |
+| POST | `/login` | Iniciar sesión |
 
 **Con sesión (token `Authorization: Bearer ...`)**
 
-| Método             | Ruta                                    | Descripción                             |
-| ------------------ | --------------------------------------- | --------------------------------------- |
-| POST               | `/logout`                               | Cerrar sesión                           |
-| GET                | `/sesion`                               | Datos del usuario conectado             |
-| GET                | `/catalogos`                            | Familias, unidades, etapas, resultados… |
-| GET                | `/usuarios?rol=evaluador`               | Lista de evaluadores                    |
-| GET                | `/indicadores`                          | Datos del panel                         |
-| GET · POST         | `/candidatos`                           | Listar · registrar                      |
-| GET · PUT · DELETE | `/candidatos/:id`                       | Ver · editar · eliminar                 |
-| GET · POST         | `/solicitudes`                          | Listar (con filtros) · crear (con CV)   |
-| GET · PUT · DELETE | `/solicitudes/:id`                      | Ver · editar · eliminar                 |
-| PATCH              | `/solicitudes/:id/etapa`                | Avanzar o retroceder etapa              |
-| PUT                | `/solicitudes/:id/evaluacion`           | Registrar la evaluación                 |
-| GET                | `/solicitudes/:id/cv` · `/descriptor`   | Descargar adjuntos                      |
-| GET                | `/postulaciones` · `/postulaciones/:id` | Bandeja de postulaciones                |
-| GET                | `/postulaciones/:id/cv`                 | Descargar CV                            |
-| PATCH              | `/postulaciones/:id/estado`             | Descartar o reabrir                     |
-| DELETE             | `/postulaciones/:id`                    | Eliminar                                |
+| Método | Ruta | Descripción |
+|---|---|---|
+| POST | `/logout` | Cerrar sesión |
+| GET | `/sesion` | Datos del usuario conectado |
+| GET | `/catalogos` | Familias, unidades, etapas, resultados… |
+| GET | `/usuarios?rol=evaluador` | Lista de evaluadores |
+| GET | `/indicadores` | Datos del panel |
+| GET · POST | `/candidatos` | Listar · registrar |
+| GET · PUT · DELETE | `/candidatos/:id` | Ver · editar · eliminar |
+| GET · POST | `/solicitudes` | Listar (con filtros) · crear (con CV) |
+| GET · PUT · DELETE | `/solicitudes/:id` | Ver · editar · eliminar |
+| PATCH | `/solicitudes/:id/etapa` | Avanzar o retroceder etapa |
+| PUT | `/solicitudes/:id/evaluacion` | Registrar la evaluación |
+| GET | `/solicitudes/:id/cv` · `/descriptor` | Descargar adjuntos |
+| GET | `/postulaciones` · `/postulaciones/:id` | Bandeja de postulaciones |
+| GET | `/postulaciones/:id/cv` | Descargar CV |
+| PATCH | `/postulaciones/:id/estado` | Descartar o reabrir |
+| DELETE | `/postulaciones/:id` | Eliminar |
 
 ## 10. Seguridad y privacidad
 
@@ -285,16 +298,16 @@ Base: `http://localhost:3001/api`
 
 Pruebas automáticas con **Vitest**:
 
-| Dónde    | Comando                  | Pruebas | Qué revisan                                                                                                                                                                             |
-| -------- | ------------------------ | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend  | `cd server` → `npm test` | **112** | Validaciones, reglas de negocio, fechas, permisos por rol, seguridad (contraseñas, sesiones, límite de intentos), indicadores, datos de demo, correos y la API pública de punta a punta |
-| Frontend | `npm test` (en la raíz)  | **40**  | Validación de formularios, filtros de búsqueda, formato de fechas y teléfonos, exportación a Excel y nombres de pestaña                                                                 |
+| Dónde | Comando | Pruebas | Qué revisan |
+|---|---|---|---|
+| Backend | `cd server` → `npm test` | **112** | Validaciones, reglas de negocio, fechas, permisos por rol, seguridad (contraseñas, sesiones, límite de intentos), indicadores, datos de demo, correos y la API pública de punta a punta |
+| Frontend | `npm test` (en la raíz) | **40** | Validación de formularios, filtros de búsqueda, formato de fechas y teléfonos, exportación a Excel y nombres de pestaña |
 
 **Escenarios de prueba manual** (los que pide el caso: registro, búsqueda, actualización de estado, evaluación y dashboard):
 
 1. Enviar una postulación en `/postular` (con errores y sin ellos).
-2. Como **analista**: verla en _Postulaciones_, pasarla a evaluación y crear la solicitud.
-3. Buscar y filtrar en _Solicitudes_ (por etapa, responsable, familia y texto).
+2. Como **analista**: verla en *Postulaciones*, pasarla a evaluación y crear la solicitud.
+3. Buscar y filtrar en *Solicitudes* (por etapa, responsable, familia y texto).
 4. Como **evaluador**: registrar la fecha, agendar, marcar como realizada, poner el resultado y enviar el informe.
 5. Revisar que el **Panel** se actualiza.
 6. Como **jefatura**: comprobar que solo puede consultar.
@@ -302,7 +315,6 @@ Pruebas automáticas con **Vitest**:
 ## 12. Instalación y ejecución
 
 ### Requisitos
-
 - **Node.js 22.5 o superior** (recomendado 24). Comprueba tu versión con `node -v`.
 - **Git**.
 
@@ -341,30 +353,28 @@ npm run dev
 # → abre http://localhost:5173
 ```
 
-| Qué                | Dirección                      |
-| ------------------ | ------------------------------ |
+| Qué | Dirección |
+|---|---|
 | Formulario público | http://localhost:5173/postular |
-| Panel interno      | http://localhost:5173/login    |
+| Panel interno | http://localhost:5173/login |
 
 ### Configuración opcional (`server/.env`)
-
 Copia `server/.env.example` como `server/.env` para cambiar el puerto, los límites de intentos o el correo real (SMTP). Sin configurar nada, el sistema funciona y los correos se envían en **modo prueba (Ethereal)**: no llegan a nadie, y la terminal muestra un enlace para verlos.
 
 ## 13. Datos de demostración y usuarios
 
 `node seed.js --reset` borra todo y carga datos **ficticios**:
-
 - 12 candidatos con solicitudes en las 4 etapas.
 - 4 postulaciones web (3 por revisar y 1 descartada).
 - CV de ejemplo en PDF.
 
-| Usuario      | Contraseña     | Rol                       | Nombre (ficticio)         |
-| ------------ | -------------- | ------------------------- | ------------------------- |
-| `admin`      | `admin123`     | Administrador             | Administrador del sistema |
-| `analista`   | `analista123`  | Analista de Reclutamiento | Carla Rojas               |
-| `evaluador`  | `evaluador123` | Profesional Evaluador     | Paula Vidal               |
-| `evaluador2` | `evaluador123` | Profesional Evaluador     | Rodrigo Saavedra          |
-| `jefatura`   | `jefatura123`  | Jefatura (solo lectura)   | Andrés Pino               |
+| Usuario | Contraseña | Rol | Nombre (ficticio) |
+|---|---|---|---|
+| `admin` | `admin123` | Administrador | Administrador del sistema |
+| `analista` | `analista123` | Analista de Reclutamiento | Carla Rojas |
+| `evaluador` | `evaluador123` | Profesional Evaluador | Paula Vidal |
+| `evaluador2` | `evaluador123` | Profesional Evaluador | Rodrigo Saavedra |
+| `jefatura` | `jefatura123` | Jefatura (solo lectura) | Andrés Pino |
 
 > Son claves de demostración. En producción el servidor **no crea** estos usuarios: exige definir `ADMIN_USUARIO` y `ADMIN_PASSWORD` en `.env`.
 
@@ -397,23 +407,23 @@ AquaChile_Form/
 
 ## 15. Problemas frecuentes
 
-| Síntoma                                                     | Solución                                                                                        |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `"vite" no se reconoce…`                                    | Falta instalar: `npm install` en la raíz.                                                       |
-| `Cannot find package 'express'`                             | Falta instalar el backend: `cd server` → `npm install`.                                         |
+| Síntoma | Solución |
+|---|---|
+| `"vite" no se reconoce…` | Falta instalar: `npm install` en la raíz. |
+| `Cannot find package 'express'` | Falta instalar el backend: `cd server` → `npm install`. |
 | `npm.ps1 … ejecución de scripts deshabilitada` (PowerShell) | Usa `npm.cmd install`, o ejecuta una vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. |
-| La página dice _"No pudimos conectarnos con el servidor"_   | El backend no está encendido: `cd server` → `node server.js`.                                   |
-| Hice cambios en `server/` y no se ven                       | Reinicia el servidor (**Ctrl + C** y `node server.js`).                                         |
-| La página se ve sin estilos                                 | Revisa que `src/main.jsx` tenga `import './index.css'` y reinicia `npm run dev`.                |
-| Quiero volver a los datos iniciales                         | `cd server` → `node seed.js --reset`.                                                           |
-| _"Demasiados intentos de inicio de sesión"_                 | Espera 15 minutos o reinicia el servidor.                                                       |
+| La página dice *"No pudimos conectarnos con el servidor"* | El backend no está encendido: `cd server` → `node server.js`. |
+| Hice cambios en `server/` y no se ven | Reinicia el servidor (**Ctrl + C** y `node server.js`). |
+| La página se ve sin estilos | Revisa que `src/main.jsx` tenga `import './index.css'` y reinicia `npm run dev`. |
+| Quiero volver a los datos iniciales | `cd server` → `node seed.js --reset`. |
+| *"Demasiados intentos de inicio de sesión"* | Espera 15 minutos o reinicia el servidor. |
 
 ## 16. Fuera del alcance del MVP
 
 Quedan como **evolución futura** (fuera del alcance obligatorio del curso, según el caso):
 
 - **IA** para generar un borrador del informe psicolaboral (planificada para la 3.ª evaluación).
-- Integración con **Microsoft 365** (Outlook, Planner, SharePoint, Power BI) y con el sitio real _Trabaja con nosotros_.
+- Integración con **Microsoft 365** (Outlook, Planner, SharePoint, Power BI) y con el sitio real *Trabaja con nosotros*.
 - Inicio de sesión corporativo (SSO) y gestión de usuarios desde la interfaz.
 - Agenda de entrevistas con calendario y aviso al candidato.
 - Base de datos en la nube y respaldo automático.
@@ -421,6 +431,6 @@ Quedan como **evolución futura** (fuera del alcance obligatorio del curso, seg�
 ## 17. Equipo
 
 - **Diego Barria**
-- **Fernando Castillo**
+- **Fernando**
 
 Asignatura Full Stack II · DuocUC · 2026

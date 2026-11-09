@@ -8,6 +8,7 @@ import { opcionesPublicas } from '../modelos/catalogos.js';
 import { validarArchivo } from '../validaciones.js';
 import { recibirPostulacion } from '../servicios/postulaciones.js';
 import { manejar, borrarArchivos } from './utilidades.js';
+import { guardarEnCarpetaDePersona } from '../servicios/archivos.js';
 
 export const MENSAJE_RECIBIDA = 'Recibimos tu postulación. Si tu perfil calza con la vacante, te contactaremos por correo.';
 
@@ -36,8 +37,21 @@ export function rutasPublicas({ repo, subida, carpetaArchivos, limitarPostulacio
             return res.status(400).json({ ok: false, mensaje: 'Revisa el archivo adjunto.', errores: { cv: error } });
           }
         }
-        const { ignorada } = recibirPostulacion(repo, req.body || {}, cv);
-        if (ignorada) await borrarCv(); // bot: se borra, pero se responde igual
+        const body = req.body || {};
+        // Bot (campo trampa lleno): se borra el archivo, pero se responde igual
+        if (typeof body.sitioWeb === 'string' && body.sitioWeb.trim()) {
+          await borrarCv();
+          return res.status(201).json({ ok: true, mensaje: MENSAJE_RECIBIDA });
+        }
+        // El CV pasa a la carpeta de la persona: uploads/Nombre-Apellido-xxxxxx/CV-postulacion.pdf
+        if (cv && typeof body.nombre === 'string' && body.nombre.trim()) {
+          cv.filename = await guardarEnCarpetaDePersona(carpetaArchivos, cv.path, {
+            nombre: body.nombre,
+            correo: body.correo,
+            tipo: 'CV-postulacion',
+          });
+        }
+        recibirPostulacion(repo, body, cv);
         res.status(201).json({ ok: true, mensaje: MENSAJE_RECIBIDA });
       } catch (err) {
         await borrarCv(); // si no se guardó, no deja archivos huérfanos

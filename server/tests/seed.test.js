@@ -6,6 +6,7 @@ import { crearRepositorio } from '../db.js';
 import { asegurarUsuariosIniciales, USUARIOS_DEMO } from '../servicios/usuarios.js';
 import { cargarDatosDemo, crearPdfSimple } from '../seed.js';
 import { validarArchivo } from '../validaciones.js';
+import { carpetaDePersona } from '../servicios/archivos.js';
 import { calcularIndicadores } from '../servicios/indicadores.js';
 
 describe('Usuarios iniciales', () => {
@@ -65,8 +66,10 @@ describe('Datos ficticios de la demo', () => {
   });
 
   test('los CV de ejemplo son PDF válidos que el propio sistema acepta', async () => {
-    const archivos = fs.readdirSync(carpeta);
+    // Cada persona tiene su carpeta: uploads/Nombre-Apellido-xxxxxx/CV.pdf
+    const archivos = fs.readdirSync(carpeta, { recursive: true }).filter((a) => a.endsWith('.pdf'));
     expect(archivos).toHaveLength(16); // 12 de solicitudes + 4 de postulaciones
+    expect(fs.readdirSync(carpeta)).toContain(carpetaDePersona('Camila Henríquez', 'camila.henriquez@ejemplo.cl'));
     expect(await validarArchivo(path.join(carpeta, archivos[0]), '.pdf')).toBe(null);
     expect(crearPdfSimple('Prueba', ['línea con tilde (y paréntesis)']).subarray(0, 5).toString()).toBe('%PDF-');
   });
